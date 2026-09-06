@@ -3,8 +3,11 @@
 Why this exists: the visual demo must run on a clean checkout with no AWS credentials
 and must replay byte-identically, but the agent layer must still be a real Strands
 Agent/Graph rather than a hand-rolled loop. FixtureModel implements the Strands `Model`
-interface and returns a pre-computed structured payload, so the graph topology, hooks,
+interface and returns a pre-computed structured payload, so the graph topology,
 structured-output enforcement and node boundaries are all genuinely exercised.
+
+What this does NOT exercise: Strands hooks (not yet implemented) and tool invocation
+(no agent is registered with tools yet). See docs/architecture/03 3.5-3.6.
 
 Swapping in `strands.models.BedrockModel` is a one-line change in graph.py; nothing else
 about the workflow moves.
