@@ -21,6 +21,8 @@ This pack is deliberately split into a credible target architecture and a small 
 5. [Interfaces and Data Contracts](05-interfaces-and-data-contracts.md) — stable API, event, plan, approval, and tool contracts.
 6. [Delivery Roadmap and Evaluation](06-delivery-roadmap-and-evaluation.md) — compressed build plan, test scenarios, metrics, and demo script.
 7. [Claude Code Handoff](07-claude-code-handoff.md) — implementation sequence and guardrails for the next agent.
+8. [Visual Demo Plan](08-visual-demo-plan.md) — situation-room layout, scene elements, and the three-minute demo narrative.
+9. [TOGAF ADM Traceability and Artefact Register](09-togaf-adm-artefacts.md) — phase-by-phase artefacts, requirements specification, and compliance assessment.
 
 ## Architecture decisions
 

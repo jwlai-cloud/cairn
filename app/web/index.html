@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CAIRN — Mine Operations Decision Room</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">CAIRN</div>
+  <div class="crumbs">
+    <span id="shift">SHIFT —</span><span class="sep">|</span>
+    <span id="site">SITE —</span><span class="sep">|</span>
+    <span id="incidentStatus" class="status-chip">NORMAL SHIFT</span>
+  </div>
+  <div class="badges">
+    <span class="badge badge-sim" title="No mine system, PLC, SCADA, dispatch, ERP or CMMS is connected.">SIMULATION ONLY</span>
+    <span class="badge" id="modeBadge">mode —</span>
+    <span class="badge" id="policyBadge">policy —</span>
+    <span class="badge" id="renderBadge">render —</span>
+  </div>
+</header>
+
+<div class="kpis" id="kpiStrip"></div>
+
+<main class="grid">
+  <section class="scene-wrap">
+    <div id="sceneHost" class="scene-host">
+      <canvas id="scene3d"></canvas>
+      <canvas id="scene2d" hidden></canvas>
+    </div>
+    <div class="scene-legend">
+      <span><i class="dot dot-normal"></i>normal</span>
+      <span><i class="dot dot-constrained"></i>constrained</span>
+      <span><i class="dot dot-failed"></i>failed</span>
+      <span><i class="dot dot-selected"></i>selected / plan</span>
+      <span><i class="dot dot-closed"></i>route closed</span>
+      <button id="toggleRender" class="link-btn" type="button">use 2D fallback</button>
+    </div>
+    <div id="assetPop" class="asset-pop" hidden></div>
+  </section>
+
+  <aside class="panels">
+    <div class="panel" id="incidentPanel">
+      <h2>Incident brief</h2>
+      <div id="incidentBody" class="muted">No incident. Inject events to begin.</div>
+    </div>
+
+    <div class="panel">
+      <h2>Agent activity</h2>
+      <div id="agentList" class="agents"></div>
+      <p class="fineprint">Status, findings, evidence and uncertainty only. Reasoning traces are not exposed.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Evidence <span id="evidenceCount" class="pill">0</span></h2>
+      <div id="evidenceList" class="evidence"></div>
+    </div>
+  </aside>
+</main>
+
+<section class="rail">
+  <div class="rail-head">
+    <h2>Recovery options</h2>
+    <span id="recommendNote" class="muted"></span>
+  </div>
+  <div id="scenarioCards" class="cards">
+    <div class="empty">Run the analysis to generate recovery options.</div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="timeline" id="timeline"></div>
+  <div class="controls">
+    <button id="btnInject" type="button">Inject next event</button>
+    <button id="btnInjectAll" type="button">Inject all</button>
+    <button id="btnAnalyse" type="button" class="primary">Run analysis</button>
+    <button id="btnApprove" type="button" class="approve" disabled>Approve plan</button>
+    <button id="btnProhibited" type="button" class="danger">Attempt interlock override</button>
+    <button id="btnAudit" type="button">Audit trace</button>
+    <button id="btnReset" type="button">Reset / replay</button>
+  </div>
+</footer>
+
+<div id="toast" class="toast" hidden></div>
+
+<div id="auditDrawer" class="drawer" hidden>
+  <div class="drawer-head">
+    <h2>Audit trace</h2>
+    <div class="drawer-meta" id="auditMeta"></div>
+    <button id="btnCloseAudit" type="button" class="link-btn">close</button>
+  </div>
+  <div class="chain">source event → evidence → agent findings → scenario → policy decision → human approval → action request → outcome</div>
+  <div id="auditBody" class="audit"></div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
