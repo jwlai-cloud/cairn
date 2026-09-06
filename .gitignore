@@ -11,8 +11,8 @@ htmlcov/
 .env.*
 !.env.example
 .aws/
-credentials
-config
+.aws/credentials
+.aws/config
 artifacts/local/
 sessions/local/
 *.sqlite3

@@ -1,0 +1,246 @@
+{
+  "fixtureId": "compound-disruption-v1",
+  "seed": 20260906,
+  "note": "Synthetic. No live mine data. Coordinates are stylised scene units, not survey coordinates.",
+  "site": {
+    "siteId": "site_pilbara_01",
+    "name": "North Pit",
+    "shiftLabel": "Shift A - 14:00",
+    "assets": [
+      {"assetId": "bench_01", "name": "Bench 1 (RL 240)", "kind": "BENCH", "position": {"x": -46, "y": 0, "z": 0}, "detail": "Upper bench, active drill pattern"},
+      {"assetId": "bench_02", "name": "Bench 2 (RL 225)", "kind": "BENCH", "position": {"x": -46, "y": -4, "z": 0}, "detail": "Primary loading bench"},
+      {"assetId": "bench_03", "name": "Bench 3 (RL 210)", "kind": "BENCH", "position": {"x": -46, "y": -8, "z": 0}, "detail": "Pit floor, two excavators"},
+
+      {"assetId": "asset_primary_crusher_01", "name": "Primary Crusher 01", "kind": "CRUSHER", "position": {"x": 26, "y": 0, "z": -12}, "detail": "Gyratory, nominal 2400 t/h"},
+      {"assetId": "asset_processing_plant_01", "name": "Processing Plant", "kind": "PLANT", "position": {"x": 52, "y": 0, "z": -18}, "detail": "Downstream of primary crusher"},
+      {"assetId": "asset_rom_stockpile_01", "name": "ROM Stockpile", "kind": "STOCKPILE", "position": {"x": 12, "y": 0, "z": 20}, "detail": "Live buffer 6200 t"},
+      {"assetId": "asset_workshop_01", "name": "Maintenance Workshop", "kind": "WORKSHOP", "position": {"x": 48, "y": 0, "z": 26}, "detail": "Two bays, one crew on shift"},
+      {"assetId": "asset_weather_cell_01", "name": "Rain Cell", "kind": "WEATHER_ZONE", "position": {"x": -20, "y": 0, "z": -46}, "detail": "Convective cell tracking south-east"},
+
+      {"assetId": "asset_truck_201", "name": "Truck 201", "kind": "TRUCK", "position": {"x": -30, "y": 0, "z": 6}, "homeRouteId": "route_east_ramp", "detail": "793F, loaded"},
+      {"assetId": "asset_truck_202", "name": "Truck 202", "kind": "TRUCK", "position": {"x": -10, "y": 0, "z": 2}, "homeRouteId": "route_east_ramp", "detail": "793F, loaded"},
+      {"assetId": "asset_truck_203", "name": "Truck 203", "kind": "TRUCK", "position": {"x": 8, "y": 0, "z": -4}, "homeRouteId": "route_east_ramp", "detail": "793F, tipping"},
+      {"assetId": "asset_truck_204", "name": "Truck 204", "kind": "TRUCK", "position": {"x": -22, "y": 0, "z": 14}, "homeRouteId": "route_east_ramp", "detail": "793F, hydraulic fault"},
+      {"assetId": "asset_truck_205", "name": "Truck 205", "kind": "TRUCK", "position": {"x": -36, "y": 0, "z": -14}, "homeRouteId": "route_north_ramp", "detail": "793F, returning empty"},
+      {"assetId": "asset_truck_206", "name": "Truck 206", "kind": "TRUCK", "position": {"x": -12, "y": 0, "z": -22}, "homeRouteId": "route_north_ramp", "detail": "793F, returning empty"},
+      {"assetId": "asset_truck_207", "name": "Truck 207", "kind": "TRUCK", "position": {"x": 14, "y": 0, "z": 8}, "homeRouteId": "route_stockpile_link", "detail": "789D, stockpile rehandle"},
+      {"assetId": "asset_truck_208", "name": "Truck 208", "kind": "TRUCK", "position": {"x": -40, "y": 0, "z": 20}, "homeRouteId": "route_workshop_spur", "detail": "789D, spare"}
+    ],
+    "routes": [
+      {
+        "routeId": "route_east_ramp",
+        "name": "East Ramp (primary loaded haul)",
+        "exposedToWeather": true,
+        "detail": "Steepest grade, drains poorly, first route closed in rain",
+        "path": [{"x": -44, "y": 0, "z": 10}, {"x": -26, "y": 0, "z": 6}, {"x": -6, "y": 0, "z": 0}, {"x": 12, "y": 0, "z": -6}, {"x": 24, "y": 0, "z": -11}]
+      },
+      {
+        "routeId": "route_north_ramp",
+        "name": "North Ramp (alternate haul)",
+        "exposedToWeather": false,
+        "detail": "Longer, lower grade, sheltered by highwall",
+        "path": [{"x": -44, "y": 0, "z": -6}, {"x": -34, "y": 0, "z": -18}, {"x": -10, "y": 0, "z": -24}, {"x": 12, "y": 0, "z": -20}, {"x": 24, "y": 0, "z": -13}]
+      },
+      {
+        "routeId": "route_stockpile_link",
+        "name": "Stockpile Rehandle Link",
+        "exposedToWeather": false,
+        "detail": "Crusher to ROM stockpile buffer",
+        "path": [{"x": 24, "y": 0, "z": -9}, {"x": 20, "y": 0, "z": 4}, {"x": 14, "y": 0, "z": 18}]
+      },
+      {
+        "routeId": "route_workshop_spur",
+        "name": "Workshop Spur",
+        "exposedToWeather": false,
+        "detail": "Pit to maintenance workshop",
+        "path": [{"x": -40, "y": 0, "z": 20}, {"x": -6, "y": 0, "z": 26}, {"x": 26, "y": 0, "z": 28}, {"x": 46, "y": 0, "z": 26}]
+      }
+    ]
+  },
+  "baselineKpi": {
+    "tonnesMoved": 8200,
+    "tonnesTarget": 12000,
+    "crusherAvailabilityPercent": 100.0,
+    "activeTrucks": 8,
+    "weatherWindowMinutes": null,
+    "unresolvedRisks": 0
+  },
+  "events": [
+    {
+      "eventId": "evt_crusher_derate",
+      "eventType": "ASSET_DEGRADED",
+      "offsetSeconds": 180,
+      "siteId": "site_pilbara_01",
+      "assetId": "asset_primary_crusher_01",
+      "locationId": "loc_crusher_01",
+      "severity": "HIGH",
+      "title": "Primary Crusher 01 throughput down 25%",
+      "measurements": {"capacityPercent": 75.0, "nominalCapacityPercent": 100.0, "throughputTph": 1800.0},
+      "freshnessSeconds": 3,
+      "evidenceIds": ["evd_plant_scada_derate", "evd_crusher_vibration"],
+      "source": {"system": "plant-simulator", "sourceRecordId": "plant-42-20260906-1403", "observationLagSeconds": 3},
+      "metadata": {"cause": "Feeder liner wear, rising bearing vibration"}
+    },
+    {
+      "eventId": "evt_truck_204_unavailable",
+      "eventType": "ASSET_UNAVAILABLE",
+      "offsetSeconds": 480,
+      "siteId": "site_pilbara_01",
+      "assetId": "asset_truck_204",
+      "severity": "HIGH",
+      "title": "Truck 204 unavailable - hydraulic fault",
+      "measurements": {"expectedDownMinutes": 90.0},
+      "freshnessSeconds": 5,
+      "evidenceIds": ["evd_fleet_dispatch_204", "evd_fleet_telemetry_stale"],
+      "source": {"system": "fleet-simulator", "sourceRecordId": "fms-204-20260906-1408", "observationLagSeconds": 5},
+      "metadata": {"operator": "unassigned", "towRequired": false}
+    },
+    {
+      "eventId": "evt_weather_route_closure",
+      "eventType": "WEATHER_ALERT",
+      "offsetSeconds": 720,
+      "siteId": "site_pilbara_01",
+      "routeId": "route_east_ramp",
+      "assetId": "asset_weather_cell_01",
+      "severity": "HIGH",
+      "title": "Rain forecast to close East Ramp within 42 minutes",
+      "measurements": {"minutesToClosure": 42.0, "expectedRainfallMm": 14.0, "confidencePercent": 78.0},
+      "freshnessSeconds": 60,
+      "evidenceIds": ["evd_weather_bom", "evd_weather_onsite"],
+      "source": {"system": "weather-simulator", "sourceRecordId": "wx-northpit-20260906-1412", "observationLagSeconds": 60},
+      "metadata": {"control": "Ramp closure is a standing geotechnical control, not a discretionary call"}
+    },
+    {
+      "eventId": "evt_maintenance_crew_committed",
+      "eventType": "MAINTENANCE_CONSTRAINT",
+      "offsetSeconds": 1020,
+      "siteId": "site_pilbara_01",
+      "assetId": "asset_workshop_01",
+      "severity": "MEDIUM",
+      "title": "Only maintenance crew committed to Shovel 02 until 16:10",
+      "measurements": {"crewFreeInMinutes": 113.0},
+      "freshnessSeconds": 12,
+      "evidenceIds": ["evd_cmms_crew_roster"],
+      "source": {"system": "cmms-simulator", "sourceRecordId": "cmms-crew-20260906-1417", "observationLagSeconds": 12},
+      "metadata": {"crewId": "crew_mech_a"}
+    },
+    {
+      "eventId": "evt_production_constraint",
+      "eventType": "PRODUCTION_CONSTRAINT",
+      "offsetSeconds": 1080,
+      "siteId": "site_pilbara_01",
+      "assetId": "asset_rom_stockpile_01",
+      "severity": "MEDIUM",
+      "title": "Shift target at risk; ROM live buffer only 6200 t",
+      "measurements": {"stockpileLiveTonnes": 6200.0, "shiftTargetTonnes": 12000.0, "tonnesMovedToDate": 8200.0},
+      "freshnessSeconds": 8,
+      "evidenceIds": ["evd_production_ledger"],
+      "source": {"system": "production-simulator", "sourceRecordId": "prod-20260906-1418", "observationLagSeconds": 8},
+      "metadata": {"note": "Rehandle from stockpile competes with crusher feed"}
+    }
+  ],
+  "evidence": [
+    {
+      "evidenceId": "evd_plant_scada_derate",
+      "sourceSystem": "plant-simulator",
+      "sourceRecordId": "plant-42-20260906-1403",
+      "observedAtOffsetSeconds": 177,
+      "receivedAtOffsetSeconds": 180,
+      "freshnessSeconds": 3,
+      "reliability": 0.95,
+      "dataClassification": "INTERNAL",
+      "summary": "Crusher throughput 1800 t/h against 2400 t/h nominal for 6 consecutive minutes."
+    },
+    {
+      "evidenceId": "evd_crusher_vibration",
+      "sourceSystem": "condition-monitoring-simulator",
+      "sourceRecordId": "cm-crusher01-20260906-1401",
+      "observedAtOffsetSeconds": 60,
+      "receivedAtOffsetSeconds": 180,
+      "freshnessSeconds": 120,
+      "reliability": 0.88,
+      "dataClassification": "INTERNAL",
+      "summary": "Main bearing vibration trending up 18% over 4 hours; alarm threshold not yet reached."
+    },
+    {
+      "evidenceId": "evd_fleet_dispatch_204",
+      "sourceSystem": "fleet-simulator",
+      "sourceRecordId": "fms-204-20260906-1408",
+      "observedAtOffsetSeconds": 475,
+      "receivedAtOffsetSeconds": 480,
+      "freshnessSeconds": 5,
+      "reliability": 0.93,
+      "dataClassification": "INTERNAL",
+      "summary": "Truck 204 keyed off at Bench 2 with hydraulic pressure fault code H-221."
+    },
+    {
+      "evidenceId": "evd_fleet_telemetry_stale",
+      "sourceSystem": "fleet-telemetry-simulator",
+      "sourceRecordId": "tlm-204-20260906-1353",
+      "observedAtOffsetSeconds": -420,
+      "receivedAtOffsetSeconds": 480,
+      "freshnessSeconds": 900,
+      "reliability": 0.55,
+      "dataClassification": "INTERNAL",
+      "stale": true,
+      "summary": "STALE: last telemetry packet for Truck 204 is 15 minutes old; payload state unconfirmed."
+    },
+    {
+      "evidenceId": "evd_weather_bom",
+      "sourceSystem": "weather-simulator",
+      "sourceRecordId": "wx-regional-20260906-1412",
+      "observedAtOffsetSeconds": 660,
+      "receivedAtOffsetSeconds": 720,
+      "freshnessSeconds": 60,
+      "reliability": 0.78,
+      "dataClassification": "PUBLIC",
+      "conflictsWith": ["evd_weather_onsite"],
+      "summary": "Regional forecast: 14 mm cell reaching North Pit in 42 minutes."
+    },
+    {
+      "evidenceId": "evd_weather_onsite",
+      "sourceSystem": "onsite-gauge-simulator",
+      "sourceRecordId": "wx-gauge-northpit-20260906-1411",
+      "observedAtOffsetSeconds": 640,
+      "receivedAtOffsetSeconds": 720,
+      "freshnessSeconds": 80,
+      "reliability": 0.71,
+      "dataClassification": "INTERNAL",
+      "conflictsWith": ["evd_weather_bom"],
+      "summary": "CONFLICT: on-site gauge and radar put cell arrival at 55 minutes, 13 minutes later than the regional forecast."
+    },
+    {
+      "evidenceId": "evd_cmms_crew_roster",
+      "sourceSystem": "cmms-simulator",
+      "sourceRecordId": "cmms-crew-20260906-1417",
+      "observedAtOffsetSeconds": 1008,
+      "receivedAtOffsetSeconds": 1020,
+      "freshnessSeconds": 12,
+      "reliability": 0.9,
+      "dataClassification": "RESTRICTED",
+      "summary": "Mechanical crew A committed to Shovel 02 gearbox until 16:10; no second crew rostered on shift."
+    },
+    {
+      "evidenceId": "evd_production_ledger",
+      "sourceSystem": "production-simulator",
+      "sourceRecordId": "prod-20260906-1418",
+      "observedAtOffsetSeconds": 1072,
+      "receivedAtOffsetSeconds": 1080,
+      "freshnessSeconds": 8,
+      "reliability": 0.96,
+      "dataClassification": "INTERNAL",
+      "summary": "8200 t moved against a 12000 t shift target; ROM live buffer 6200 t."
+    },
+    {
+      "evidenceId": "evd_geotech_ramp_control",
+      "sourceSystem": "geotech-standards",
+      "sourceRecordId": "std-ramp-closure-v4",
+      "observedAtOffsetSeconds": -86400,
+      "receivedAtOffsetSeconds": 720,
+      "freshnessSeconds": 86400,
+      "reliability": 1.0,
+      "dataClassification": "CRITICAL_OPERATIONAL",
+      "summary": "Standing control: East Ramp closes at 10 mm accumulated rainfall. Closure is not discretionary."
+    }
+  ]
+}
