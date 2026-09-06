@@ -1,0 +1,508 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "CAIRN \u2014 Mine Operations Decision Fabric",
+    "subtitle": "The model proposes. Policy, approval and the action gateway sit outside it, and Zone 0 has no control path.",
+    "output": "docs/architecture/diagrams/cairn-architecture.html",
+    "visual_preset": "blueprint",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/jwlai-cloud/cairn",
+      "revision": "a081ef9a6e1665af32da96d3ad41c64841401f25"
+    },
+    "viewBox": [
+      1664,
+      720
+    ],
+    "views": [
+      {
+        "id": "bounded-graph",
+        "label": "Bounded agent graph",
+        "focus": [
+          "fixtures",
+          "situation",
+          "reliability",
+          "operations",
+          "risk",
+          "planner"
+        ],
+        "note": "Four specialists run in parallel; the planner waits for all four and reduces their typed output."
+      },
+      {
+        "id": "authority",
+        "label": "Where authority lives",
+        "focus": [
+          "planner",
+          "policy",
+          "approval",
+          "human",
+          "gateway"
+        ],
+        "note": "The graph proposes. Policy, approval and the gateway decide, and none of them calls a model."
+      },
+      {
+        "id": "evidence",
+        "label": "Evidence and effect",
+        "focus": [
+          "gateway",
+          "simstore",
+          "audit",
+          "ot"
+        ],
+        "note": "Every effect is simulated, every stage is audited, and Zone 0 is not reachable."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "fixtures",
+      "type": "external",
+      "label": "Synthetic Site Adapter",
+      "sublabel": "fixtures only \u00b7 no live system",
+      "tag": "Zone 1",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        156,
+        68
+      ],
+      "sources": [
+        {
+          "path": "app/integrations/fixture_source.py",
+          "label": "read-only adapter"
+        }
+      ]
+    },
+    {
+      "id": "situation",
+      "type": "backend",
+      "label": "Situation",
+      "sublabel": "correlates signals",
+      "tag": "strands agent",
+      "pos": [
+        268,
+        92
+      ],
+      "size": [
+        156,
+        62
+      ],
+      "sources": [
+        {
+          "path": "app/agents/reducers.py",
+          "label": "situation()"
+        }
+      ]
+    },
+    {
+      "id": "reliability",
+      "type": "backend",
+      "label": "Reliability",
+      "sublabel": "equipment constraints",
+      "tag": "strands agent",
+      "pos": [
+        268,
+        214
+      ],
+      "size": [
+        156,
+        62
+      ],
+      "sources": [
+        {
+          "path": "app/agents/reducers.py",
+          "label": "reliability()"
+        }
+      ]
+    },
+    {
+      "id": "operations",
+      "type": "backend",
+      "label": "Operations",
+      "sublabel": "feasible levers",
+      "tag": "strands agent",
+      "pos": [
+        268,
+        336
+      ],
+      "size": [
+        156,
+        62
+      ],
+      "sources": [
+        {
+          "path": "app/agents/reducers.py",
+          "label": "operations()"
+        }
+      ]
+    },
+    {
+      "id": "risk",
+      "type": "backend",
+      "label": "Risk and HSE",
+      "sublabel": "hazards and controls",
+      "tag": "strands agent",
+      "pos": [
+        268,
+        458
+      ],
+      "size": [
+        156,
+        62
+      ],
+      "sources": [
+        {
+          "path": "app/agents/reducers.py",
+          "label": "risk()"
+        }
+      ]
+    },
+    {
+      "id": "planner",
+      "type": "backend",
+      "label": "Scenario Planner",
+      "sublabel": "ranks 3 options",
+      "tag": "strands agent",
+      "pos": [
+        508,
+        268
+      ],
+      "size": [
+        164,
+        68
+      ],
+      "sources": [
+        {
+          "path": "app/agents/graph.py",
+          "label": "GraphBuilder"
+        }
+      ]
+    },
+    {
+      "id": "policy",
+      "type": "security",
+      "label": "Policy Service",
+      "sublabel": "Tier 0-4 \u00b7 fails closed",
+      "tag": "no model call",
+      "pos": [
+        756,
+        268
+      ],
+      "size": [
+        164,
+        68
+      ],
+      "sources": [
+        {
+          "path": "app/policy/decisions.py",
+          "label": "RULES table"
+        }
+      ]
+    },
+    {
+      "id": "approval",
+      "type": "security",
+      "label": "Approval Service",
+      "sublabel": "scoped \u00b7 expiring \u00b7 single-use",
+      "tag": "no model call",
+      "pos": [
+        1004,
+        268
+      ],
+      "size": [
+        164,
+        68
+      ],
+      "sources": [
+        {
+          "path": "app/domain/run_service.py",
+          "label": "request_approval"
+        }
+      ]
+    },
+    {
+      "id": "gateway",
+      "type": "security",
+      "label": "Action Gateway",
+      "sublabel": "single choke point",
+      "tag": "idempotent",
+      "pos": [
+        1252,
+        268
+      ],
+      "size": [
+        164,
+        68
+      ],
+      "sources": [
+        {
+          "path": "app/tools/action_tools.py",
+          "label": "ActionGateway"
+        }
+      ]
+    },
+    {
+      "id": "simstore",
+      "type": "database",
+      "label": "Simulation Store",
+      "sublabel": "SIM- artefacts only",
+      "tag": "no side effect",
+      "pos": [
+        1440,
+        271
+      ],
+      "size": [
+        156,
+        62
+      ]
+    },
+    {
+      "id": "audit",
+      "type": "database",
+      "label": "Audit Ledger",
+      "sublabel": "append-only \u00b7 replayable",
+      "tag": "assurance",
+      "pos": [
+        1004,
+        56
+      ],
+      "size": [
+        164,
+        62
+      ],
+      "sources": [
+        {
+          "path": "app/audit/ledger.py",
+          "label": "AuditLedger"
+        }
+      ]
+    },
+    {
+      "id": "human",
+      "type": "external",
+      "label": "Shift Boss",
+      "sublabel": "accountable approver",
+      "tag": "human in the loop",
+      "pos": [
+        1004,
+        470
+      ],
+      "size": [
+        164,
+        62
+      ]
+    },
+    {
+      "id": "room",
+      "type": "frontend",
+      "label": "Situation Room",
+      "sublabel": "Three.js + 2D fallback",
+      "tag": "no policy logic",
+      "pos": [
+        508,
+        470
+      ],
+      "size": [
+        164,
+        62
+      ],
+      "sources": [
+        {
+          "path": "app/api/main.py",
+          "label": "FastAPI read model"
+        }
+      ]
+    },
+    {
+      "id": "ot",
+      "type": "external",
+      "label": "PLC / SCADA / Dispatch",
+      "sublabel": "no control path exists",
+      "tag": "Zone 0",
+      "pos": [
+        1440,
+        466
+      ],
+      "size": [
+        156,
+        68
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "Bounded Strands graph \u2014 proposes, never authorises",
+      "wraps": [
+        "situation",
+        "reliability",
+        "operations",
+        "risk",
+        "planner"
+      ],
+      "pad": 26
+    },
+    {
+      "kind": "region",
+      "label": "Deterministic services \u2014 outside the model",
+      "wraps": [
+        "policy",
+        "approval",
+        "gateway"
+      ],
+      "pad": 22
+    },
+    {
+      "kind": "region",
+      "label": "Zone 0 \u2014 no control path",
+      "wraps": [
+        "ot"
+      ],
+      "pad": 30
+    }
+  ],
+  "connections": [
+    {
+      "from": "fixtures",
+      "to": "situation",
+      "label": "GraphContext",
+      "variant": "emphasis"
+    },
+    {
+      "from": "fixtures",
+      "to": "reliability",
+      "variant": "emphasis"
+    },
+    {
+      "from": "fixtures",
+      "to": "operations",
+      "variant": "emphasis"
+    },
+    {
+      "from": "fixtures",
+      "to": "risk",
+      "variant": "emphasis"
+    },
+    {
+      "from": "situation",
+      "to": "planner",
+      "label": "typed output",
+      "variant": "emphasis"
+    },
+    {
+      "from": "reliability",
+      "to": "planner",
+      "variant": "emphasis"
+    },
+    {
+      "from": "operations",
+      "to": "planner",
+      "variant": "emphasis"
+    },
+    {
+      "from": "risk",
+      "to": "planner",
+      "variant": "emphasis"
+    },
+    {
+      "from": "planner",
+      "to": "policy",
+      "label": "ScenarioSet",
+      "variant": "emphasis"
+    },
+    {
+      "from": "policy",
+      "to": "approval",
+      "label": "escalate",
+      "variant": "security",
+      "labelAt": [
+        962,
+        352
+      ]
+    },
+    {
+      "from": "approval",
+      "to": "gateway",
+      "label": "approval token",
+      "variant": "security",
+      "labelAt": [
+        1192,
+        352
+      ]
+    },
+    {
+      "from": "gateway",
+      "to": "simstore",
+      "label": "simulated artefact",
+      "variant": "emphasis",
+      "labelAt": [
+        1428,
+        356
+      ]
+    },
+    {
+      "from": "gateway",
+      "to": "audit",
+      "variant": "dashed"
+    },
+    {
+      "from": "policy",
+      "to": "audit",
+      "variant": "dashed"
+    },
+    {
+      "from": "planner",
+      "to": "room",
+      "label": "read model",
+      "variant": "dashed",
+      "labelAt": [
+        590,
+        412
+      ]
+    },
+    {
+      "from": "room",
+      "to": "human",
+      "label": "reviews options",
+      "variant": "default"
+    },
+    {
+      "from": "human",
+      "to": "approval",
+      "label": "approves",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "violet",
+      "title": "Bounded orchestration",
+      "items": [
+        "Four specialists run in parallel; the planner waits for all four",
+        "max_node_executions 12, execution 90s, per-node 30s",
+        "Topology fixed at build time: no dynamic nodes, edges or tools"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Authority sits outside the model",
+      "items": [
+        "Policy is a pure function of action type, role, scope and freshness",
+        "Tier 4 is denied for every role; an unlisted action fails closed",
+        "The gateway is the only path to a state change: policy, then approval, then idempotent claim"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Evidence and boundaries",
+      "items": [
+        "Every artefact is SIM- prefixed and written to a simulation store",
+        "The ledger is append-only and replays event through outcome",
+        "No mine system, PLC, SCADA, dispatch, ERP or CMMS is connected"
+      ]
+    }
+  ]
+}

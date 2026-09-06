@@ -81,27 +81,9 @@ Two extra controls worth showing: **use 2D fallback** (top-right of the scene, w
 
 Read the [architecture pack](docs/architecture/README.md) in order. The two most useful entry points are the [TOGAF ADM traceability register](docs/architecture/09-togaf-adm-artefacts.md), which maps every stakeholder concern through to a passing test, and the [visual demo plan](docs/architecture/08-visual-demo-plan.md).
 
-```text
-                      ┌──────────────── situation room (3D + 2D fallback) ────────────────┐
-                      │            renders the read model · contains no policy            │
-                      └────────────────────────────┬─────────────────────────────────────┘
-                                                   │ typed read model
-                      ┌────────────────────────────┴─────────────────────────────────────┐
-                      │                    decision API (FastAPI)                        │
-                      └────────────────────────────┬─────────────────────────────────────┘
-                                                   │
-   ┌───────────────────────────────────────────────┴──────────────────────────────────────┐
-   │  bounded Strands graph                     deterministic services (no model)          │
-   │                                                                                       │
-   │   situation ─┐                             policy service ── approval service         │
-   │   reliability┤                                    │                 │                 │
-   │   operations ┼─→ scenario_planner  ────────────→  └──→ action gateway (simulated) ──┐ │
-   │   risk      ─┘                                            │                          │ │
-   │                                                    outcome verifier ─→ audit ledger ─┘ │
-   └───────────────────────────────────────────────────────────────────────────────────────┘
-                                                   │ read-only
-                                     synthetic site adapter (fixtures)
-```
+![CAIRN architecture — the model proposes; policy, approval and the action gateway sit outside it](docs/architecture/diagrams/cairn-architecture.png)
+
+<sub>[SVG](docs/architecture/diagrams/cairn-architecture.svg) · [interactive version](docs/architecture/diagrams/cairn-architecture.html) (pan, zoom, trace a path, jump to source) · [diagram source](docs/architecture/diagrams/cairn-architecture.architecture.json)</sub>
 
 The four specialists run in parallel and the planner waits for all four. Policy, approval, action coordination and outcome verification sit **outside** the graph on purpose: the model proposes, it never authorises.
 

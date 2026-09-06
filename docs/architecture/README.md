@@ -24,6 +24,14 @@ This pack is deliberately split into a credible target architecture and a small 
 8. [Visual Demo Plan](08-visual-demo-plan.md) — situation-room layout, scene elements, and the three-minute demo narrative.
 9. [TOGAF ADM Traceability and Artefact Register](09-togaf-adm-artefacts.md) — phase-by-phase artefacts, requirements specification, and compliance assessment.
 
+## System diagram
+
+![CAIRN architecture](diagrams/cairn-architecture.png)
+
+Rendered from [`diagrams/cairn-architecture.architecture.json`](diagrams/cairn-architecture.architecture.json), which
+declares source evidence against real files, so the diagram is checked against the code rather than drawn beside it.
+An [interactive build](diagrams/cairn-architecture.html) supports pan, zoom, path tracing and jump-to-source.
+
 ## Architecture decisions
 
 - [ADR-001: Python, Strands, and Bedrock](decisions/ADR-001-python-strands-bedrock.md)
