@@ -32,7 +32,7 @@ Open <http://127.0.0.1:8000>.
 
 ```bash
 source .venv/bin/activate
-python -m pytest -q                # 49 tests
+python -m pytest -q                # 60 tests
 python -m pytest tests/safety -q   # safety cases only
 ```
 
@@ -132,7 +132,11 @@ docs/architecture/ the architecture pack and ADRs
 | `fixture` (default) | `uvicorn app.api.main:app` | none | byte-identical replay |
 | `bedrock` | `CAIRN_MODE=bedrock uvicorn app.api.main:app` | AWS + Bedrock model access | not guaranteed |
 
-Fixture mode is not a mock of the agent layer. It is a real Strands `Graph` of real `Agent` nodes with structured-output enforcement; only the model provider is deterministic (`app/agents/fixture_model.py`). Switching to Bedrock changes one line in `app/agents/graph.py` and nothing else about the workflow.
+Fixture mode is not a mock of the agent layer. It is a real Strands `Graph` of real `Agent` nodes with structured-output enforcement; only the model *provider* is deterministic.
+
+It is also not a constant. Strands' `Graph` delivers each upstream node's structured output to its dependants as JSON in the request messages; `FixtureModel` parses that transport and runs a reducer over it (`app/agents/reducers.py`), so **every node's output is a function of its inputs**. Delete the risk agent's hazards and the route closures disappear; raise a hazard's severity and the recommendation flips from *Recover tonnes* to *Protect safety*; remove the maintenance constraint and the preserve option's recovery time drops. `tests/evaluation/test_graph_dataflow.py` asserts all of it — those tests fail if the nodes stop reading each other.
+
+Switching to Bedrock changes one line in `app/agents/graph.py` and nothing else about the workflow.
 
 ---
 

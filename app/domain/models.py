@@ -265,6 +265,9 @@ class RiskFinding(AgentOutputBase):
     severity: Severity
     time_bound_minutes: int | None = None
     affected_route_ids: list[str] = Field(default_factory=list)
+    # A binding control is not discretionary: no scenario may trade it away, and the
+    # planner derives its route closures from exactly these findings.
+    binding: bool = False
 
 
 class RiskAssessment(AgentOutputBase):

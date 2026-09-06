@@ -17,6 +17,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import timedelta
 
+from app.agents.context import GraphContext
 from app.agents.graph import PLANNER, SPECIALISTS, run_graph
 from app.audit.ledger import AuditLedger
 from app.domain.models import (
@@ -175,7 +176,15 @@ class Run:
         )
 
         titles = "; ".join(e.title for e in self.events)
-        result = await run_graph(f"Compound disruption on Shift A at North Pit. Signals: {titles}", self.mode)
+        context = GraphContext(
+            events=tuple(self.events),
+            evidence=tuple(self.evidence),
+            site=self.source.site_model(),
+            baseline_kpi=self.source.baseline_kpi(),
+        )
+        result = await run_graph(
+            f"Compound disruption on Shift A at North Pit. Signals: {titles}", context, self.mode
+        )
         self.outputs = result.outputs
 
         started = utcnow()

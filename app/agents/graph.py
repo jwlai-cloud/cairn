@@ -8,6 +8,10 @@ tools at run time, because a high-consequence operational path has to be inspect
     operations ┼─→ scenario_planner
     risk      ─┘
 
+The four specialists reduce the injected event context. The planner reduces what those
+four actually returned, delivered by the graph itself - so the edges carry data, not
+just execution order.
+
 Policy review, approval, action coordination and outcome verification are deterministic
 services that sit *outside* this graph. The model proposes; it never authorises.
 """
@@ -17,12 +21,14 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel
 from strands import Agent
 from strands.multiagent import GraphBuilder
 
-from app.agents import fixture_outputs
+from app.agents import reducers
+from app.agents.context import GraphContext
 from app.agents.fixture_model import FixtureModel
 from app.domain.models import (
     MODEL_ID_FIXTURE,
@@ -60,30 +66,51 @@ PLANNER = NodeSpec(
     "scenario_planner", "Scenario planner", "Ranks genuinely different options", "scenario_planner.v1.md", ScenarioSet
 )
 
-FIXTURE_PAYLOADS = {
-    "situation": fixture_outputs.situation_summary,
-    "reliability": fixture_outputs.reliability_constraints,
-    "operations": fixture_outputs.operations_envelope,
-    "risk": fixture_outputs.risk_assessment,
-    "scenario_planner": fixture_outputs.scenario_set,
-}
+NODE_OUTPUT_MODELS: dict[str, type[BaseModel]] = {s.node_id: s.output_model for s in (*SPECIALISTS, PLANNER)}
 
 
 def load_prompt(spec: NodeSpec) -> str:
     return (PROMPT_DIR / spec.prompt_file).read_text()
 
 
-def _model_for(spec: NodeSpec, mode: str):
+def _reducer_for(spec: NodeSpec, ctx: GraphContext):
+    """Bind a node's reducer. Specialists read the context; the planner reads its peers."""
+    if spec.node_id == "situation":
+        return lambda _upstream: reducers.situation(ctx)
+    if spec.node_id == "reliability":
+        return lambda _upstream: reducers.reliability(ctx)
+    if spec.node_id == "operations":
+        return lambda _upstream: reducers.operations(ctx)
+    if spec.node_id == "risk":
+        return lambda _upstream: reducers.risk(ctx)
+
+    def plan(upstream: dict[str, dict[str, Any]]) -> ScenarioSet:
+        # Revalidate the upstream payloads through the same contracts the specialists
+        # emitted them under. If a dependency drifts off-contract, this raises here
+        # rather than producing a confident plan built on a malformed input.
+        return reducers.scenario_planner(
+            ctx,
+            situation_summary=SituationSummary.model_validate(upstream["situation"]),
+            reliability_set=ConstraintSet.model_validate(upstream["reliability"]),
+            operations_set=ConstraintSet.model_validate(upstream["operations"]),
+            risk_assessment=RiskAssessment.model_validate(upstream["risk"]),
+        )
+
+    return plan
+
+
+def _model_for(spec: NodeSpec, ctx: GraphContext, mode: str):
     if mode == "bedrock":  # pragma: no cover - requires AWS credentials, not exercised in CI
         from strands.models import BedrockModel
 
         return BedrockModel(model_id="us.anthropic.claude-sonnet-4-5-20250929-v1:0", temperature=0.0)
-    return FixtureModel(FIXTURE_PAYLOADS[spec.node_id](), node_id=spec.node_id)
+    requires = () if spec.node_id != PLANNER.node_id else tuple(s.node_id for s in SPECIALISTS)
+    return FixtureModel(_reducer_for(spec, ctx), node_id=spec.node_id, requires=requires)
 
 
-def _agent(spec: NodeSpec, mode: str) -> Agent:
+def _agent(spec: NodeSpec, ctx: GraphContext, mode: str) -> Agent:
     return Agent(
-        model=_model_for(spec, mode),
+        model=_model_for(spec, ctx, mode),
         name=spec.node_id,
         description=spec.role,
         system_prompt=load_prompt(spec),
@@ -101,14 +128,14 @@ class GraphRunResult:
     prompt_version: str = PROMPT_VERSION
 
 
-def build_graph(mode: str = "fixture"):
+def build_graph(ctx: GraphContext, mode: str = "fixture"):
     """Construct the bounded graph. Same shape in fixture and bedrock mode."""
     builder = GraphBuilder()
     builder.set_graph_id("cairn-compound-disruption-v1")
     for spec in (*SPECIALISTS, PLANNER):
-        builder.add_node(_agent(spec, mode), spec.node_id)
+        builder.add_node(_agent(spec, ctx, mode), spec.node_id)
     for spec in SPECIALISTS:
-        builder.set_entry_point(spec.node_id)          # four specialists run in parallel
+        builder.set_entry_point(spec.node_id)            # four specialists run in parallel
         builder.add_edge(spec.node_id, PLANNER.node_id)  # planner waits for all four
     builder.set_max_node_executions(MAX_NODE_EXECUTIONS)
     builder.set_execution_timeout(EXECUTION_TIMEOUT_SECONDS)
@@ -116,8 +143,8 @@ def build_graph(mode: str = "fixture"):
     return builder.build()
 
 
-async def run_graph(prompt: str, mode: str = "fixture") -> GraphRunResult:
-    graph = build_graph(mode)
+async def run_graph(prompt: str, ctx: GraphContext, mode: str = "fixture") -> GraphRunResult:
+    graph = build_graph(ctx, mode)
     started = time.perf_counter()
     result = await graph.invoke_async(prompt)
     elapsed_ms = int((time.perf_counter() - started) * 1000)
@@ -134,8 +161,7 @@ async def run_graph(prompt: str, mode: str = "fixture") -> GraphRunResult:
         statuses[node_id] = NodeStatus.COMPLETED
         timings[node_id] = int(getattr(node_result, "execution_time", 0)) or max(elapsed_ms // 5, 1)
 
-    missing = {s.node_id for s in (*SPECIALISTS, PLANNER)} - set(outputs)
-    for node_id in missing:
+    for node_id in {s.node_id for s in (*SPECIALISTS, PLANNER)} - set(outputs):
         statuses[node_id] = NodeStatus.FAILED
 
     return GraphRunResult(
