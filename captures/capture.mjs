@@ -214,7 +214,8 @@ console.log(`video: ${files.join(', ') || 'none written'}`);
 console.log(`pageerrors: ${JSON.stringify(errors.slice(0, 3))}`);
 console.log('\nbeat sheet (measured against the video clock)');
 for (const b of beats) {
-  const m = Math.floor(b.at / 60);
-  const s = String(Math.round(b.at % 60)).padStart(2, '0');
+  const whole = Math.round(b.at);
+  const m = Math.floor(whole / 60);
+  const s = String(whole % 60).padStart(2, '0');
   console.log(`  ${b.section === 'post' ? '+' : ' '}${m}:${s}  ${b.seconds.toFixed(1).padStart(5)}s  ${b.label}`);
 }

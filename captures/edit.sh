@@ -61,7 +61,16 @@ cut() { # cut <in> <ss> <t|-> <slowdown> <out>
     -an -c:v libx264 -preset medium -crf 19 -pix_fmt yuv420p -r 30 "$5"
 }
 
-SLIDE_K=$(python3 -c "print(f'{float('$SLIDE_SECS')/63.0:.6f}')")   # slides hold 24+25+14
+# The slide section's declared length comes from the sheet, not a constant. It was 63
+# seconds when there were three frames and is 104 with the architecture frames added.
+SLIDE_PLAN=$(python3 - <<'PY'
+import re
+rows = [m for m in (re.match(r'^\|\s*\d+:\d\d\s*\|\s*(\d+)s\s*\|\s*slide\s*\|', l)
+                    for l in open('captures/narration.md')) if m]
+print(sum(int(m[1]) for m in rows))
+PY
+)
+SLIDE_K=$(python3 -c "print(f'{float('$SLIDE_SECS')/float('$SLIDE_PLAN'):.6f}')")
 cut "$APP"    "$PRE_START"  "$PRE_DUR" "$K"       "$WORK/1-pre.mp4"
 cut "$SLIDES" 0             -          "$SLIDE_K" "$WORK/2-slides.mp4"
 cut "$APP"    "$POST_START" -          "$K"       "$WORK/3-post.mp4"

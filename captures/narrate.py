@@ -19,7 +19,7 @@ sentence, not to talk faster.
 macOS `say` is the floor, not the plan: a synthesised track reads as a project that ran
 out of time. Record a human take over the same cue sheet when there is any chance to.
 
-    python3 captures/narrate.py [out.wav] [--voice Samantha] [--rate 160]
+    python3 captures/narrate.py [out.wav] [--voice Samantha] [--rate 220]
 """
 import argparse
 import json
@@ -62,9 +62,11 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("out", nargs="?", default="captures/narration.wav")
     ap.add_argument("--voice", default="Samantha")
-    ap.add_argument("--rate", type=int, default=160)
+    ap.add_argument("--rate", type=int, default=220)
     ap.add_argument("--script", default=str(HERE / "narration.md"))
     ap.add_argument("--beats", default=str(HERE / "beats.json"))
+    ap.add_argument("--calibrate", action="store_true",
+                    help="print the hold each cue needs, measured, and write nothing else")
     args = ap.parse_args()
 
     sheet = cues(pathlib.Path(args.script))
@@ -91,6 +93,17 @@ def main() -> None:
             mark = "!"
         print(f"{mark} {int(at) // 60}:{int(at) % 60:02d}  hold {hold:4.1f}s  spoken {spoken:5.1f}s")
         parts.append((wav, at))
+
+    if args.calibrate:
+        # A word-count model cannot predict per-line pauses, and it guessed wrong twice.
+        # These are the measured durations plus a fixed gap, which is what the holds
+        # should be. Feed them back into the sheet rather than modelling the rate.
+        gap = 1.5
+        import math
+        print("\nmeasured holds (spoken + %.1fs):" % gap)
+        for (at, _, _), (wav, _) in zip(lines, parts):
+            print(f"  {int(at) // 60}:{int(at) % 60:02d}\t{int(math.ceil(duration(wav) + gap))}")
+        return
 
     # Delay each line to its cue and mix. amix normalises by input count, so the gain is
     # restored afterwards; without that a track of eighteen inputs is inaudible.
