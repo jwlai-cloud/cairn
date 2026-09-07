@@ -20,6 +20,7 @@ from datetime import timedelta
 from app.agents.context import GraphContext
 from app.agents.graph import PLANNER, SPECIALISTS, resolve_model_id_for, run_graph
 from app.audit.ledger import AuditLedger
+from app.audit.store import AuditStore, build_store
 from app.domain.models import (
     MODEL_ID_FIXTURE,
     POLICY_VERSION,
@@ -83,7 +84,8 @@ class Run:
 
     mode: str = "fixture"
     source: FixtureSource = field(default_factory=FixtureSource)
-    ledger: AuditLedger = field(default_factory=lambda: AuditLedger(CORRELATION_ID))
+    audit_store: AuditStore | None = None
+    ledger: AuditLedger = field(init=False)
     policy: PolicyService = field(default_factory=PolicyService)
     injected_event_ids: list[str] = field(default_factory=list)
     nodes: dict[str, AgentNodeRun] = field(default_factory=dict)
@@ -104,6 +106,7 @@ class Run:
     reads: ReadTools = field(init=False)
 
     def __post_init__(self) -> None:
+        self.ledger = AuditLedger(CORRELATION_ID, store=self.audit_store)
         self.gateway = ActionGateway(policy=self.policy, ledger=self.ledger)
         self.reads = ReadTools(self.source)
         self._init_nodes()
@@ -731,16 +734,25 @@ class Run:
 
 
 class RunStore:
-    """Single-run in-memory store. Reset replaces it, which is what makes replay reliable."""
+    """Single active run. Reset replaces it, which is what makes replay reliable.
 
-    def __init__(self, mode: str = "fixture") -> None:
+    The audit store is shared across resets on purpose: replaying the demo must not
+    erase the record of what was decided before, only start a new run against it.
+    """
+
+    def __init__(self, mode: str = "fixture", audit_database: str | None = None) -> None:
         self.mode = mode
-        self._run = Run(mode=mode)
+        self.audit_store = build_store(audit_database)
+        self._run = Run(mode=mode, audit_store=self.audit_store)
 
     @property
     def run(self) -> Run:
         return self._run
 
     def reset(self) -> Run:
-        self._run = Run(mode=self.mode)
+        self._run = Run(mode=self.mode, audit_store=self.audit_store)
         return self._run
+
+    def audit_history(self) -> list:
+        """Every entry ever recorded for this correlation id, across runs and restarts."""
+        return self.audit_store.entries_for_correlation(CORRELATION_ID)
