@@ -37,6 +37,7 @@ An [interactive build](diagrams/cairn-architecture.html) supports pan, zoom, pat
 - [ADR-001: Python, Strands, and Bedrock](decisions/ADR-001-python-strands-bedrock.md)
 - [ADR-002: Bounded graph orchestration](decisions/ADR-002-bounded-graph-orchestration.md)
 - [ADR-003: Human-gated state changes](decisions/ADR-003-human-gated-actions.md)
+- [ADR-004: Bedrock model selection](decisions/ADR-004-bedrock-model-selection.md)
 
 ## Non-goals for the first build
 

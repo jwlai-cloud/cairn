@@ -191,7 +191,12 @@ class Run:
             baseline_kpi=self.source.baseline_kpi(),
         )
         result = await run_graph(
-            f"Compound disruption on Shift A at North Pit. Signals: {titles}", context, self.mode
+            f"Compound disruption on Shift A at North Pit. Signals: {titles}",
+            context,
+            self.mode,
+            # Reuse the id already named in GRAPH_STARTED so the audit entry and the
+            # run cannot describe different models.
+            model_id=self.model_id,
         )
         self.outputs = result.outputs
         self.model_id = result.model_id

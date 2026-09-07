@@ -76,3 +76,76 @@ def test_the_audit_names_the_model_that_actually_ran():
     from app.domain.models import MODEL_ID_FIXTURE
 
     assert resolve_model_id_for("fixture") == MODEL_ID_FIXTURE
+
+
+def test_the_preference_list_matches_real_bedrock_id_conventions(monkeypatch):
+    """Two conventions coexist: bare 5.x family ids and dated 4.x ids. Both must rank."""
+    monkeypatch.setattr(bm, "_candidates", lambda region: [
+        "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+        "us.amazon.nova-lite-v1:0",
+        "us.openai.gpt-5.6-luna",
+        "us.anthropic.claude-sonnet-5",
+    ])
+    assert bm.resolve_model_id("us-east-1") == "us.anthropic.claude-sonnet-5"
+
+
+def test_a_newer_claude_4_x_outranks_an_older_one(monkeypatch):
+    monkeypatch.setattr(bm, "_candidates", lambda region: [
+        "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "us.anthropic.claude-opus-4-8",
+    ])
+    assert bm.resolve_model_id("us-east-1") == "us.anthropic.claude-opus-4-8"
+
+
+def test_the_three_models_adr_004_selects_are_all_ranked():
+    """ADR-004 enables Sonnet 5, GPT-5.6 Luna and Nova Lite. All must be selectable."""
+    for family in ("claude-sonnet-5", "gpt-5.6-luna", "nova-lite"):
+        assert family in bm.PREFERENCE, f"{family} is not in the preference list"
+
+
+def test_the_fallback_is_a_currently_valid_id():
+    """The fallback fires when listing is denied; a stale id would fail confusingly."""
+    assert bm.FALLBACK_MODEL_ID == "us.anthropic.claude-sonnet-5"
+
+
+async def test_the_model_is_resolved_once_per_graph_not_once_per_node(monkeypatch):
+    """Per-node resolution could give nodes different models and misreport the run."""
+    import app.agents.graph as graph_module
+    from app.agents.context import GraphContext
+    from app.integrations.fixture_source import FixtureSource
+
+    calls: list[str] = []
+    original = graph_module.resolve_model_id_for
+
+    def counted(mode: str) -> str:
+        calls.append(mode)
+        return original(mode)
+
+    monkeypatch.setattr(graph_module, "resolve_model_id_for", counted)
+
+    source = FixtureSource()
+    ctx = GraphContext(
+        tuple(source.events()), tuple(source.evidence()), source.site_model(), source.baseline_kpi()
+    )
+    result = await graph_module.run_graph("x", ctx)
+
+    assert len(calls) == 1, f"resolved {len(calls)} times for a five-node graph"
+    assert result.model_id == original("fixture")
+
+
+async def test_an_explicit_model_id_is_used_without_resolving_at_all(monkeypatch):
+    """The run service names the model in the audit first, then passes it down."""
+    import app.agents.graph as graph_module
+    from app.agents.context import GraphContext
+    from app.integrations.fixture_source import FixtureSource
+
+    def explode(_mode: str) -> str:
+        raise AssertionError("must not resolve when the caller supplied a model id")
+
+    monkeypatch.setattr(graph_module, "resolve_model_id_for", explode)
+    source = FixtureSource()
+    ctx = GraphContext(
+        tuple(source.events()), tuple(source.evidence()), source.site_model(), source.baseline_kpi()
+    )
+    result = await graph_module.run_graph("x", ctx, model_id="pinned-for-this-run")
+    assert result.model_id == "pinned-for-this-run"
