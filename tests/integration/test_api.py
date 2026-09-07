@@ -117,3 +117,31 @@ def test_audit_history_is_scoped_to_the_session():
         b = bob.get("/v1/audit/corr_compound_disruption_v1/history").json()
         assert a["entryCount"] == 5
         assert b["entryCount"] == 0, "bob must not see alice's audit entries"
+
+
+def test_audit_history_survives_a_reset_without_leaking_across_sessions():
+    """Reset starts a new run key, so history has to span the keys a session has used.
+
+    Querying only the current run key lost everything the visitor had already done the
+    moment they pressed Reset; querying the correlation id instead would have spanned
+    every visitor, because they all share it.
+    """
+    from fastapi.testclient import TestClient
+
+    from app.api.main import app, store
+
+    store.clear()
+    with TestClient(app) as alice, TestClient(app) as bob:
+        alice.post("/v1/events")
+        before = alice.get("/v1/audit/corr_compound_disruption_v1/history").json()["entryCount"]
+        assert before > 0
+
+        alice.post("/v1/runs/current/reset")
+        alice.post("/v1/events")
+        after = alice.get("/v1/audit/corr_compound_disruption_v1/history").json()
+
+        assert after["entryCount"] == before * 2, "the pre-reset run must still be in the history"
+        assert [e["seq"] for e in after["entries"]] == sorted(e["seq"] for e in after["entries"])
+
+        bob.post("/v1/events")
+        assert bob.get("/v1/audit/corr_compound_disruption_v1/history").json()["entryCount"] == before

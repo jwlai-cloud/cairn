@@ -751,6 +751,10 @@ class RunStore:
         self.mode = mode
         self.audit_store = audit_store or build_store(audit_database)
         self._run = Run(mode=mode, audit_store=self.audit_store)
+        # Each reset starts a new run key. Keeping the previous ones is what lets the
+        # history span resets without widening the query to the correlation id, which
+        # every session shares and would therefore leak across visitors.
+        self._run_keys = [self._run.ledger.run_key]
 
     @property
     def run(self) -> Run:
@@ -758,11 +762,19 @@ class RunStore:
 
     def reset(self) -> Run:
         self._run = Run(mode=self.mode, audit_store=self.audit_store)
+        self._run_keys.append(self._run.ledger.run_key)
         return self._run
 
     def audit_history(self) -> list:
-        """Every entry recorded against this correlation id, across resets."""
-        return self.audit_store.entries_for_correlation(CORRELATION_ID)
+        """Every entry from this store's runs, oldest first, across resets.
+
+        Scoped to the run keys this store has issued, so a shared audit database is
+        still only ever read back one visitor's worth at a time. Bounded by the
+        store's own lifetime: the run keys live in memory, so a restart starts the
+        history again even when the entries themselves are durable.
+        """
+        entries = [e for key in self._run_keys for e in self.audit_store.entries_for_run(key)]
+        return sorted(entries, key=lambda e: e.seq)
 
 
 class SessionRunStore:
@@ -806,8 +818,7 @@ class SessionRunStore:
 
     def audit_history(self, session_id: str) -> list:
         """Only this session's entries, so one visitor never sees another's decisions."""
-        store = self.store_for(session_id)
-        return store.audit_store.entries_for_run(store.run.ledger.run_key)
+        return self.store_for(session_id).audit_history()
 
     def clear(self) -> None:
         """Drop every session. Used by tests to start from a known state."""
