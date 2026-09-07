@@ -47,7 +47,10 @@ PROMPT_DIR = Path(__file__).parent / "prompts"
 CORRELATION_ID = "corr_compound_disruption_v1"
 
 
-def _bedrock_model_id() -> str:
+def resolve_model_id_for(mode: str) -> str:
+    """The model id this mode will actually use. Named before the run, not after."""
+    if mode == "fixture":
+        return MODEL_ID_FIXTURE
     from app.agents.bedrock_models import resolve_model_id
     from app.config import settings
 
@@ -134,10 +137,11 @@ def _model_for(spec: NodeSpec, ctx: GraphContext, mode: str):
 
         from app.agents.bedrock_models import resolve_model_id
 
+        kwargs = {"region_name": settings.BEDROCK_REGION} if settings.BEDROCK_REGION else {}
         return BedrockModel(
             model_id=resolve_model_id(settings.BEDROCK_REGION, settings.BEDROCK_MODEL_ID),
-            region_name=settings.BEDROCK_REGION,
             temperature=0.0,
+            **kwargs,
         )
     requires = () if spec.node_id != PLANNER.node_id else tuple(s.node_id for s in SPECIALISTS)
     return FixtureModel(
@@ -232,5 +236,5 @@ async def run_graph(prompt: str, ctx: GraphContext, mode: str = "fixture") -> Gr
         timings=timings,
         statuses=statuses,
         telemetry=telemetry,
-        model_id=MODEL_ID_FIXTURE if mode == "fixture" else _bedrock_model_id(),
+        model_id=resolve_model_id_for(mode),
     )

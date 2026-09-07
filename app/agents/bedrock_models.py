@@ -36,14 +36,14 @@ PREFERENCE: tuple[str, ...] = (
 FALLBACK_MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 
 
-def _candidates(region: str) -> list[str]:
+def _candidates(region: str | None) -> list[str]:
     """Every model id this account can name, cross-region profiles preferred."""
     try:
         import boto3
     except ImportError:  # pragma: no cover - boto3 ships with strands
         return []
 
-    client = boto3.client("bedrock", region_name=region)
+    client = boto3.client("bedrock", region_name=region)  # region=None -> SDK default
     ids: list[str] = []
 
     try:
@@ -66,7 +66,7 @@ def _candidates(region: str) -> list[str]:
     return ids
 
 
-def discover_model_id(region: str) -> str | None:
+def discover_model_id(region: str | None) -> str | None:
     """Best available model id, or None when the account will not say."""
     ids = _candidates(region)
     if not ids:
@@ -80,7 +80,7 @@ def discover_model_id(region: str) -> str | None:
     return sorted(ids)[0]
 
 
-def resolve_model_id(region: str, configured: str | None = None) -> str:
+def resolve_model_id(region: str | None = None, configured: str | None = None) -> str:
     if configured:
         return configured
     discovered = discover_model_id(region)
@@ -90,6 +90,6 @@ def resolve_model_id(region: str, configured: str | None = None) -> str:
     logger.warning(
         "bedrock: could not list models in %s (missing bedrock:ListFoundationModels?); "
         "falling back to %s. Set CAIRN_BEDROCK_MODEL_ID to choose explicitly.",
-        region, FALLBACK_MODEL_ID,
+        region or "the SDK default region", FALLBACK_MODEL_ID,
     )
     return FALLBACK_MODEL_ID

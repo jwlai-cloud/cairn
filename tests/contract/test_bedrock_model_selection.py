@@ -43,3 +43,36 @@ def test_a_locked_down_account_falls_back_rather_than_failing_here(monkeypatch):
 def test_an_unranked_model_is_still_usable(monkeypatch):
     monkeypatch.setattr(bm, "_candidates", lambda region: ["some.future-model-v9:0"])
     assert bm.resolve_model_id("us-east-1") == "some.future-model-v9:0"
+
+
+def test_region_is_not_forced_when_nothing_is_configured(monkeypatch):
+    """Forcing us-east-1 would override AWS_DEFAULT_REGION, profiles and task roles."""
+    for name in ("CAIRN_BEDROCK_REGION", "AWS_REGION", "AWS_DEFAULT_REGION"):
+        monkeypatch.delenv(name, raising=False)
+    import importlib
+
+    from app.config import settings
+
+    importlib.reload(settings)
+    assert settings.BEDROCK_REGION is None
+
+
+def test_the_standard_aws_region_variables_are_honoured(monkeypatch):
+    import importlib
+
+    from app.config import settings
+
+    monkeypatch.delenv("CAIRN_BEDROCK_REGION", raising=False)
+    monkeypatch.delenv("AWS_REGION", raising=False)
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-central-1")
+    importlib.reload(settings)
+    assert settings.BEDROCK_REGION == "eu-central-1"
+    monkeypatch.delenv("AWS_DEFAULT_REGION", raising=False)
+    importlib.reload(settings)
+
+
+def test_the_audit_names_the_model_that_actually_ran():
+    from app.agents.graph import resolve_model_id_for
+    from app.domain.models import MODEL_ID_FIXTURE
+
+    assert resolve_model_id_for("fixture") == MODEL_ID_FIXTURE
