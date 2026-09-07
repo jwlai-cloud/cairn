@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import timedelta
 
@@ -745,9 +746,10 @@ class RunStore:
     erase the record of what was decided before, only start a new run against it.
     """
 
-    def __init__(self, mode: str = "fixture", audit_database: str | None = None) -> None:
+    def __init__(self, mode: str = "fixture", audit_database: str | None = None,
+                 audit_store: AuditStore | None = None) -> None:
         self.mode = mode
-        self.audit_store = build_store(audit_database)
+        self.audit_store = audit_store or build_store(audit_database)
         self._run = Run(mode=mode, audit_store=self.audit_store)
 
     @property
@@ -759,5 +761,58 @@ class RunStore:
         return self._run
 
     def audit_history(self) -> list:
-        """Every entry ever recorded for this correlation id, across runs and restarts."""
+        """Every entry recorded against this correlation id, across resets."""
         return self.audit_store.entries_for_correlation(CORRELATION_ID)
+
+
+class SessionRunStore:
+    """One independent run per visitor.
+
+    A single process-wide run is fine on a laptop and wrong the moment the demo is
+    hosted: two judges opening the same URL would share one run, so one pressing Reset
+    would wipe the other's demo mid-watch. Each session therefore gets its own Run,
+    keyed by a cookie.
+
+    Sessions are capped and evicted least-recently-used, because a public link is an
+    unbounded number of visitors and this store lives in memory.
+    """
+
+    def __init__(self, mode: str = "fixture", audit_database: str | None = None,
+                 max_sessions: int = 200) -> None:
+        self.mode = mode
+        self.audit_database = audit_database
+        self.max_sessions = max_sessions
+        # Audit persistence is shared: it is append-only and rows carry their run_key,
+        # so sessions cannot read or disturb each other's entries.
+        self.audit_store = build_store(audit_database)
+        self._stores: OrderedDict[str, RunStore] = OrderedDict()
+
+    def store_for(self, session_id: str) -> RunStore:
+        store = self._stores.get(session_id)
+        if store is None:
+            store = RunStore(mode=self.mode, audit_store=self.audit_store)
+            self._stores[session_id] = store
+            while len(self._stores) > self.max_sessions:
+                self._stores.popitem(last=False)
+        else:
+            self._stores.move_to_end(session_id)
+        return store
+
+    def run_for(self, session_id: str) -> Run:
+        return self.store_for(session_id).run
+
+    def reset(self, session_id: str) -> Run:
+        return self.store_for(session_id).reset()
+
+    def audit_history(self, session_id: str) -> list:
+        """Only this session's entries, so one visitor never sees another's decisions."""
+        store = self.store_for(session_id)
+        return store.audit_store.entries_for_run(store.run.ledger.run_key)
+
+    def clear(self) -> None:
+        """Drop every session. Used by tests to start from a known state."""
+        self._stores.clear()
+
+    @property
+    def session_count(self) -> int:
+        return len(self._stores)

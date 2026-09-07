@@ -58,3 +58,62 @@ def test_reset_restores_a_clean_run(api_client):
 def test_unknown_scenario_is_a_404(api_client):
     api_client.post("/v1/runs/current/analyse")
     assert api_client.get("/v1/scenarios/scn_nope").status_code == 404
+
+
+def test_two_visitors_get_independent_runs():
+    """A shared demo link must not let one visitor's Reset wipe another's demo."""
+    from fastapi.testclient import TestClient
+
+    from app.api.main import app, store
+
+    store.clear()
+    with TestClient(app) as alice, TestClient(app) as bob:
+        alice.post("/v1/events")
+        assert len(alice.get("/v1/runs/current").json()["events"]) == 5
+        assert bob.get("/v1/runs/current").json()["events"] == [], "bob sees alice's events"
+
+        bob.post("/v1/events")
+        alice.post("/v1/runs/current/reset")
+        assert alice.get("/v1/runs/current").json()["events"] == []
+        assert len(bob.get("/v1/runs/current").json()["events"]) == 5, "alice's reset wiped bob"
+        assert store.session_count == 2
+
+
+def test_a_session_cookie_is_issued_and_reused():
+    from fastapi.testclient import TestClient
+
+    from app.api.main import SESSION_COOKIE, app, store
+
+    store.clear()
+    with TestClient(app) as client:
+        first = client.get("/v1/runs/current")
+        assert SESSION_COOKIE in first.cookies or SESSION_COOKIE in client.cookies
+        sid = client.cookies.get(SESSION_COOKIE)
+        assert sid and len(sid) >= 16
+        client.get("/v1/runs/current")
+        assert client.cookies.get(SESSION_COOKIE) == sid, "session must be stable across calls"
+        assert store.session_count == 1
+
+
+def test_sessions_are_capped_and_evicted():
+    """A public link is an unbounded number of visitors; this store lives in memory."""
+    from app.domain.run_service import SessionRunStore
+
+    small = SessionRunStore(max_sessions=3)
+    for i in range(6):
+        small.run_for(f"visitor-{i}")
+    assert small.session_count == 3
+
+
+def test_audit_history_is_scoped_to_the_session():
+    from fastapi.testclient import TestClient
+
+    from app.api.main import app, store
+
+    store.clear()
+    with TestClient(app) as alice, TestClient(app) as bob:
+        alice.post("/v1/events")
+        a = alice.get("/v1/audit/corr_compound_disruption_v1/history").json()
+        b = bob.get("/v1/audit/corr_compound_disruption_v1/history").json()
+        assert a["entryCount"] == 5
+        assert b["entryCount"] == 0, "bob must not see alice's audit entries"
