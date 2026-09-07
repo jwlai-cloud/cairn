@@ -114,15 +114,37 @@ Times are cumulative. Narration is what gets said; Screen is what the capture mu
 
 ---
 
-### 4:10 – 4:30 · Method, and why it is not decoration
+### 4:10 – 4:40 · Method, and why it is not decoration
 
-> **Narration.** This was built as a TOGAF architecture cycle, not a demo with a diagram bolted on. Every stakeholder concern maps to a principle, a requirement, and a test that runs in CI. "Can this waive a safety control?" becomes principle PR-05, requirement AR-05, and a test that denies tier four for every role. A hundred and seven tests, thirteen of thirteen evaluation cases, zero prohibited-action violations, zero approval bypasses.
+> **Narration.** This was built as a TOGAF ADM cycle, not a demo with an architecture diagram bolted on afterwards. One narrow pass: one capability, one increment, one architecture contract.
 >
-> The method paid for itself. It caught a shift target that was a quarter of what the fleet actually moves, a decision rail decorated with invented survey elevations, and an agent graph whose nodes were not reading each other.
+> Here is what that actually means. An HSE authority asks one question — *can this thing waive a safety control?* In the Phase A stakeholder matrix that becomes a recorded concern. In the Preliminary phase it becomes principle PR-05: no direct control path to operational technology. In the requirements specification it becomes AR-05: deny every tier four action, for every role. In Phase E it becomes solution building block SBB-04, the deterministic policy service. And it lands in one file, `app/policy/decisions.py`, with a test that fails the build if a model is ever consulted.
 >
-> Existing systems know what happened in their own domain. CAIRN connects them, argues the trade-offs, gets a person to sign, and leaves a record. It recommends. It does not authorise.
+> One question, five artefacts, one test. That chain exists for every requirement — fifteen of them, each with the test id that proves it in the compliance table.
+>
+> And the method paid for itself. Phase G compliance review is where I found a shift target that was a quarter of what that fleet actually moves. Requirements traceability is where I found a decision rail decorated with invented survey elevations, in a system whose entire claim is that it does not invent numbers. An evaluation case is where I found an agent graph whose nodes were not reading each other at all.
+>
+> None of those were caught by tests I wrote to pass. They were caught by asking, formally, whether the thing I built matched the thing I said I was building.
 
-**Screen.** Split: `09-togaf-adm-artefacts.md` requirements table beside a green CI run. End on the room, reset and quiet.
+**Screen.** Animate the chain as it is spoken, one element at a time, on a single still frame:
+
+```
+  HSE authority  ──▶  PR-05  ──▶  AR-05  ──▶  SBB-04  ──▶  decisions.py  ──▶  ✓ test
+  "can it waive       no OT      deny tier 4   deterministic   RULES table    tier-4-denied
+   a control?"        control    every role    policy                        -for-every-role
+```
+
+Then cut to the `09 §9.12` requirements table with the test-id column highlighted, and a green CI run beside it.
+
+---
+
+### 4:40 – 5:00 · Close
+
+> **Narration.** A hundred and seven tests. Thirteen of thirteen evaluation cases. Zero prohibited-action violations, zero approval bypasses, and a replay that matches every time.
+>
+> Existing systems know what happened in their own domain. CAIRN connects them, argues the trade-offs, gets a person to sign, and leaves a record that reconstructs the whole decision. It recommends. It does not authorise.
+
+**Screen.** End on the room, reset and quiet, trucks running.
 
 ---
 

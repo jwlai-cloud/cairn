@@ -19,8 +19,12 @@ sessions/local/
 *.db
 .DS_Store
 
-# Demo video captures and their intermediates: large, regenerable, and not source.
-captures/
+# Demo recordings and their intermediates are large and regenerable. The scripts that
+# produce them are source and must stay tracked, so ignore the media, not the folder.
+captures/*.webm
+captures/*.mp4
+captures/*.mov
+captures/frames/
 *.webm
 *.mp4
 *.mov
