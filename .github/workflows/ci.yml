@@ -75,9 +75,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # No cache here: this job exists to prove a cold checkout works, and a leftover
+      # server process made the post-job cache prune hang.
       - uses: astral-sh/setup-uv@v5
         with:
-          enable-cache: true
+          enable-cache: false
       - run: uv python install 3.12
       - run: |
           uv venv --python 3.12
@@ -85,7 +87,11 @@ jobs:
 
       - name: Boot the situation room and walk the golden path over HTTP
         run: |
+          set -euo pipefail
           uv run --no-project python -m uvicorn app.api.main:app --port 8000 &
+          SERVER_PID=$!
+          # Always reap the server; leaving it running hung the post-job cleanup.
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
           for i in $(seq 1 40); do curl -sf http://127.0.0.1:8000/healthz >/dev/null && break; sleep 1; done
 
           curl -sf http://127.0.0.1:8000/healthz | tee /dev/stderr | grep -q '"credentialsRequired":false'
