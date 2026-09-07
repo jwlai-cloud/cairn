@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
+from typing import Callable
 
 from app.audit.ledger import AuditLedger
 from app.domain.models import (
@@ -28,6 +29,10 @@ from app.domain.models import (
     utcnow,
 )
 from app.policy.decisions import PolicyService
+
+
+class ExternalTimeout(Exception):
+    """The external system did not answer after the request may already have applied."""
 
 
 class ActionRejected(Exception):
@@ -79,6 +84,11 @@ def _artefact(request: ActionRequest) -> tuple[str, dict]:
     }
 
 
+def _default_transport(request: ActionRequest) -> tuple[str, dict]:
+    """Stand-in for the external system. Writes nowhere; returns the artefact it would create."""
+    return _artefact(request)
+
+
 @dataclass
 class ActionGateway:
     """The only permitted path to a state change. Simulation-only in this build."""
@@ -86,6 +96,8 @@ class ActionGateway:
     policy: PolicyService
     ledger: AuditLedger
     simulation_store: dict[str, dict] = field(default_factory=dict)
+    # Seam for the external system, so a timeout can be exercised without one.
+    transport: Callable[[ActionRequest], tuple[str, dict]] = _default_transport
     _by_idempotency_key: dict[str, ActionRecord] = field(default_factory=dict)
     records: list[ActionRecord] = field(default_factory=list)
     policy_decisions: list = field(default_factory=list)
@@ -167,6 +179,14 @@ class ActionGateway:
         # 3. Idempotency: claim the key before producing any effect.
         prior = self._by_idempotency_key.get(request.idempotency_key)
         if prior is not None:
+            # Unknown outcome first: an action that may already have applied cannot be
+            # retried at all, whatever payload the caller now presents.
+            if prior.status is ActionStatus.UNKNOWN:
+                raise ActionRejected(
+                    "RECONCILIATION_REQUIRED",
+                    "The previous attempt timed out with an unknown outcome. Reconcile it before retrying.",
+                    {"actionId": prior.action_id, "idempotencyKey": prior.idempotency_key},
+                )
             if prior.request_hash != rhash:
                 raise ActionRejected(
                     "IDEMPOTENCY_CONFLICT",
@@ -183,19 +203,51 @@ class ActionGateway:
             )
             return replay
 
-        ref, artefact = _artefact(request)
-        record = ActionRecord(
+        # Claim the key BEFORE calling out, so a timeout cannot be retried into a
+        # second effect. The claim starts as IN_PROGRESS and is only resolved below.
+        claim = ActionRecord(
             action_id=request.action_id,
             action_type=request.action_type,
-            status=ActionStatus.SUCCEEDED,
+            status=ActionStatus.IN_PROGRESS,
             idempotency_key=request.idempotency_key,
             request_hash=rhash,
             correlation_id=request.correlation_id,
             simulated=True,
-            artefact_ref=ref,
-            artefact=artefact,
             created_at=now,
-            message="Simulated only. No external system was contacted.",
+            message="Claimed; awaiting the external system.",
+        )
+        self._by_idempotency_key[request.idempotency_key] = claim
+
+        try:
+            ref, artefact = self.transport(request)
+        except ExternalTimeout as exc:
+            # The call may or may not have applied. Fail into UNKNOWN and stop; never
+            # retry blindly, because a blind retry is how one instruction becomes two.
+            unknown = claim.model_copy(
+                update={
+                    "status": ActionStatus.UNKNOWN,
+                    "message": f"Outcome unknown after timeout: {exc}. Reconciliation required.",
+                }
+            )
+            self._by_idempotency_key[request.idempotency_key] = unknown
+            self.records.append(unknown)
+            self.ledger.record(
+                "ACTION_UNKNOWN",
+                request.actor_id,
+                f"{request.action_type.value} timed out after it may have applied; entering UNKNOWN.",
+                actionId=unknown.action_id,
+                idempotencyKey=unknown.idempotency_key,
+                requiresReconciliation=True,
+            )
+            return unknown
+
+        record = claim.model_copy(
+            update={
+                "status": ActionStatus.SUCCEEDED,
+                "artefact_ref": ref,
+                "artefact": artefact,
+                "message": "Simulated only. No external system was contacted.",
+            }
         )
         self._by_idempotency_key[request.idempotency_key] = record
         self.simulation_store[ref] = artefact
@@ -211,3 +263,56 @@ class ActionGateway:
             simulated=True,
         )
         return record
+
+    def reconcile(self, action_id: str, *, applied: bool, actor_id: str) -> ActionRecord:
+        """Resolve an UNKNOWN outcome with evidence from the external system.
+
+        Only a human or an authoritative read can close this out. The gateway will not
+        guess, because guessing is what produces a duplicate work order.
+        """
+        record = next((r for r in self.records if r.action_id == action_id), None)
+        if record is None:
+            raise ActionRejected("NOT_FOUND", f"No action {action_id}.")
+        if record.status is not ActionStatus.UNKNOWN:
+            raise ActionRejected(
+                "NOT_RECONCILABLE",
+                f"Action {action_id} is {record.status.value}; only UNKNOWN can be reconciled.",
+            )
+
+        if applied:
+            ref, artefact = _artefact_ref_for(record)
+            resolved = record.model_copy(
+                update={
+                    "status": ActionStatus.SUCCEEDED,
+                    "artefact_ref": ref,
+                    "artefact": artefact,
+                    "message": "Reconciled: the external system confirmed the effect applied.",
+                }
+            )
+            self.simulation_store[ref] = artefact
+        else:
+            resolved = record.model_copy(
+                update={
+                    "status": ActionStatus.FAILED,
+                    "message": "Reconciled: the external system confirmed no effect applied.",
+                }
+            )
+
+        self._by_idempotency_key[record.idempotency_key] = resolved
+        self.records[self.records.index(record)] = resolved
+        self.ledger.record(
+            "ACTION_RECONCILED",
+            actor_id,
+            f"{record.action_type.value} reconciled to {resolved.status.value}.",
+            actionId=record.action_id,
+            applied=applied,
+        )
+        return resolved
+
+
+def _artefact_ref_for(record: ActionRecord) -> tuple[str, dict]:
+    short = record.idempotency_key.split(":")[-1]
+    return f"SIM-{record.action_type.value}-{short}", {
+        "type": record.action_type.value,
+        "system": "simulation-store (reconciled)",
+    }

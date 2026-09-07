@@ -38,6 +38,9 @@ STATUS_BY_CODE = {
     "VERSION_CONFLICT": 409,
     "IDEMPOTENCY_CONFLICT": 409,
     "NO_ACTION": 409,
+    "RECONCILIATION_REQUIRED": 409,
+    "NOT_RECONCILABLE": 409,
+    "NOT_FOUND": 404,
 }
 
 app = FastAPI(title="CAIRN", version="0.1.0", description="Mine operations decision fabric (prototype)")
@@ -66,6 +69,10 @@ class ApprovalDecisionBody(BaseModel):
 
 class ProhibitedActionBody(BaseModel):
     actionType: ActionType = ActionType.OVERRIDE_SAFETY_INTERLOCK
+
+
+class ReconcileBody(BaseModel):
+    applied: bool
 
 
 # ------------------------------------------------------------------ run lifecycle
@@ -187,6 +194,20 @@ def attempt_prohibited(body: ProhibitedActionBody) -> RunView:
     store.run.attempt_prohibited_action(
         action_type=body.actionType, actor_id=settings.ACTOR_ID, actor_roles=list(settings.ACTOR_ROLES)
     )
+    return store.run.view()
+
+
+@app.post("/v1/actions/timeout", response_model=RunView)
+def simulate_timeout() -> RunView:
+    """Demo control: the external system times out after the call may have applied."""
+    store.run.simulate_action_timeout(actor_id=settings.ACTOR_ID, actor_roles=list(settings.ACTOR_ROLES))
+    return store.run.view()
+
+
+@app.post("/v1/actions/{action_id}/reconcile", response_model=RunView)
+def reconcile_action(action_id: str, body: ReconcileBody) -> RunView:
+    """Resolve an UNKNOWN outcome with evidence. The gateway will not guess."""
+    store.run.reconcile_action(action_id, applied=body.applied, actor_id=settings.ACTOR_ID)
     return store.run.view()
 
 
