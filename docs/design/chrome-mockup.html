@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>CAIRN — design mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Palette drawn from the pit itself: basalt shadow, limestone dust, haematite ore,
+     hi-vis PPE amber, oxidised-copper green, survey-mark blue. */
+  --basalt:#07090C; --strata:#10141A; --plate:#141922; --rule:#232B36; --rule-hi:#333D4B;
+  --dust:#E6E0D4; --dust-dim:#8D8A83;
+  --haematite:#E2542C; --hivis:#F5B324; --malachite:#35C08A; --survey:#6FA8DC; --violet:#9B8CE0;
+  --chamfer: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --cond:'IBM Plex Sans Condensed',system-ui,sans-serif;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  width:1600px;height:1000px;background:var(--basalt);color:var(--dust);
+  font-family:var(--sans);font-size:13px;overflow:hidden;
+  display:grid;grid-template-rows:54px 1fr 216px 46px;
+  /* survey grid, very faint */
+  background-image:linear-gradient(var(--rule) 1px,transparent 1px),linear-gradient(90deg,var(--rule) 1px,transparent 1px);
+  background-size:80px 80px;background-blend-mode:normal;
+}
+body::before{content:'';position:fixed;inset:0;background:var(--basalt);opacity:.86;pointer-events:none;z-index:0}
+body>*{position:relative;z-index:1}
+
+/* ---------------------------------------------------------------- header */
+.bar{display:flex;align-items:center;gap:20px;padding:0 20px;
+  background:linear-gradient(180deg,#161C25,#0C1015);border-bottom:1px solid var(--rule);
+  box-shadow:0 1px 0 #000, inset 0 1px 0 #2B3542;}
+.mark{display:flex;align-items:baseline;gap:9px}
+.mark b{font-family:var(--cond);font-weight:700;font-size:22px;letter-spacing:.22em;color:var(--dust)}
+.mark span{font-family:var(--mono);font-size:9px;color:var(--dust-dim);letter-spacing:.14em}
+.crumbs{display:flex;gap:14px;font-family:var(--mono);font-size:10px;color:var(--dust-dim);letter-spacing:.1em;text-transform:uppercase}
+.crumbs b{color:var(--dust);font-weight:500}
+.state{margin-left:6px;font-family:var(--cond);font-weight:700;font-size:12px;letter-spacing:.16em;
+  padding:5px 12px;color:var(--haematite);border:1px solid #4A2318;background:#1A0F0C;clip-path:var(--chamfer)}
+.right{margin-left:auto;display:flex;align-items:center;gap:9px}
+.plate{font-family:var(--mono);font-size:9px;letter-spacing:.1em;padding:5px 10px;
+  color:var(--dust-dim);border:1px solid var(--rule);background:#0D1218;clip-path:var(--chamfer)}
+.warn{color:#0B0906;background:repeating-linear-gradient(45deg,var(--hivis),var(--hivis) 7px,#D19A10 7px,#D19A10 14px);
+  border-color:#8A6608;font-weight:700;letter-spacing:.14em}
+
+/* ----------------------------------------------------------------- main */
+.main{display:grid;grid-template-columns:124px 1fr 404px;min-height:0}
+
+/* SIGNATURE: the decision loop as pit bench levels, with reduced-level marks */
+.spine{border-right:1px solid var(--rule);background:linear-gradient(180deg,#0C1015,#080A0E);
+  padding:14px 0 0;display:flex;flex-direction:column}
+.spine h3{font-family:var(--mono);font-size:8px;letter-spacing:.18em;color:var(--dust-dim);
+  text-align:center;margin-bottom:14px}
+.bench{position:relative;flex:1;display:flex;flex-direction:column;justify-content:space-between;padding-bottom:16px}
+.lvl{display:grid;grid-template-columns:38px 1fr;align-items:center;gap:8px;padding:0 10px 0 6px;position:relative}
+.lvl .rl{font-family:var(--mono);font-size:8px;color:#4C5764;text-align:right;letter-spacing:.04em}
+.lvl .tick{position:relative;padding-left:14px;font-family:var(--cond);font-weight:600;font-size:10.5px;
+  letter-spacing:.05em;color:#5D6875;line-height:1.15}
+.lvl .tick::before{content:'';position:absolute;left:0;top:4px;width:7px;height:7px;
+  border:1px solid #39434F;background:#0B0F14;transform:rotate(45deg)}
+.lvl.done .tick{color:var(--dust-dim)}
+.lvl.done .tick::before{background:var(--malachite);border-color:var(--malachite)}
+.lvl.now .tick{color:var(--hivis)}
+.lvl.now .tick::before{background:var(--hivis);border-color:var(--hivis);box-shadow:0 0 9px var(--hivis)}
+.spine .seam{position:absolute;left:50px;top:8px;bottom:16px;width:1px;background:linear-gradient(180deg,var(--malachite) 0%,var(--malachite) 52%,#2B3440 52%,#2B3440 100%)}
+
+/* ----------------------------------------------------------- scene frame */
+.scene{position:relative;background:radial-gradient(ellipse 70% 60% at 46% 42%,#1A1B18 0%,#0A0B0D 68%);overflow:hidden}
+.scene svg{position:absolute;inset:0;width:100%;height:100%}
+.corner{position:absolute;width:19px;height:19px;border:1px solid #3A4552}
+.corner.tl{top:12px;left:12px;border-right:0;border-bottom:0}
+.corner.tr{top:12px;right:12px;border-left:0;border-bottom:0}
+.corner.bl{bottom:12px;left:12px;border-right:0;border-top:0}
+.corner.br{bottom:12px;right:12px;border-left:0;border-top:0}
+.sceneMeta{position:absolute;left:18px;top:18px;font-family:var(--mono);font-size:9px;color:#5A6673;letter-spacing:.1em;line-height:1.7}
+.sceneMeta b{color:#8E9AA6;font-weight:500}
+.northArrow{position:absolute;right:22px;top:18px;text-align:center;font-family:var(--mono);font-size:9px;color:#6D7A88}
+.northArrow div{font-size:15px;line-height:1;color:#8E9AA6}
+.scaleBar{position:absolute;left:18px;bottom:18px;font-family:var(--mono);font-size:8.5px;color:#5A6673;letter-spacing:.08em}
+.scaleBar i{display:block;width:112px;height:5px;margin-bottom:4px;
+  background:repeating-linear-gradient(90deg,#6D7A88,#6D7A88 28px,transparent 28px,transparent 56px);border:1px solid #3A4552}
+.legend{position:absolute;right:18px;bottom:18px;display:flex;gap:13px;font-family:var(--mono);font-size:8.5px;color:#6D7A88;letter-spacing:.06em}
+.legend s{text-decoration:none;display:flex;align-items:center;gap:5px}
+.legend i{width:7px;height:7px;display:block;transform:rotate(45deg)}
+
+/* --------------------------------------------------------------- dossier */
+.dossier{border-left:1px solid var(--rule);background:#0A0D12;overflow:hidden;display:flex;flex-direction:column}
+.sec{border-bottom:1px solid var(--rule);padding:13px 16px}
+.sec h2{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--dust-dim);
+  display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.sec h2::after{content:'';flex:1;height:1px;background:var(--rule)}
+.hl{font-family:var(--cond);font-weight:700;font-size:19px;line-height:1.2;letter-spacing:-.005em;margin-bottom:8px}
+.narr{font-size:12px;line-height:1.62;color:#B6B2A9}
+.narr em{font-style:normal;color:var(--dust);border-bottom:1px solid #3C4652}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+.tag{font-family:var(--mono);font-size:9px;letter-spacing:.07em;padding:3px 8px;
+  border:1px solid var(--rule);color:var(--dust-dim);background:#0D1218;clip-path:var(--chamfer)}
+.tag.hot{color:var(--haematite);border-color:#4A2318;background:#170D0A}
+.tag.warn{color:var(--hivis);border-color:#4A3A10;background:#161206}
+.tag.ok{color:var(--malachite);border-color:#144534;background:#08150F}
+
+.flag{display:grid;grid-template-columns:auto 1fr;gap:9px;padding:8px 10px;margin-top:9px;
+  font-family:var(--mono);font-size:9.5px;line-height:1.55;clip-path:var(--chamfer)}
+.flag b{font-weight:600;letter-spacing:.1em}
+.flag.stale{background:#170D0A;border-left:2px solid var(--haematite);color:#D89A85}
+.flag.stale b{color:var(--haematite)}
+.flag.conflict{background:#161206;border-left:2px solid var(--hivis);color:#CBAE72}
+.flag.conflict b{color:var(--hivis)}
+
+.agents{display:flex;flex-direction:column;gap:5px}
+.agent{border:1px solid var(--rule);background:linear-gradient(180deg,#141922,#0F131A);
+  padding:8px 10px;clip-path:var(--chamfer);box-shadow:inset 0 1px 0 #232C38}
+.agent .top{display:flex;align-items:center;gap:8px}
+.agent .dot{width:6px;height:6px;transform:rotate(45deg);background:var(--malachite);flex:0 0 auto}
+.agent .nm{font-family:var(--cond);font-weight:600;font-size:12.5px;letter-spacing:.02em}
+.agent .kind{margin-left:auto;font-family:var(--mono);font-size:8px;color:#4F5A67;letter-spacing:.08em}
+.agent .kind.det{color:var(--violet)}
+.agent .say{font-size:11px;color:#A8A49B;line-height:1.5;margin-top:5px}
+.agent .rdg{display:flex;gap:9px;margin-top:6px;font-family:var(--mono);font-size:8.5px;color:#5A6673;letter-spacing:.05em}
+.agent .tools{display:flex;gap:4px;margin-top:6px}
+.agent .tools i{font-family:var(--mono);font-style:normal;font-size:8px;letter-spacing:.04em;
+  padding:2px 6px;border:1px solid #24405E;color:var(--survey);background:#0A1119}
+
+/* ------------------------------------------------------------------ rail */
+.rail{border-top:1px solid var(--rule);background:linear-gradient(180deg,#0B0F14,#080A0E);padding:12px 20px}
+.railhead{display:flex;align-items:baseline;gap:14px;margin-bottom:10px}
+.railhead h2{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--dust-dim)}
+.railhead p{font-size:11.5px;color:#8D8A83}
+.railhead p b{color:var(--dust);font-weight:500}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{position:relative;display:grid;grid-template-columns:5px 1fr;gap:12px;
+  border:1px solid var(--rule);background:linear-gradient(180deg,#141922,#0E1218);
+  padding:11px 13px 11px 0;clip-path:var(--chamfer);box-shadow:inset 0 1px 0 #232C38}
+.card.sel{border-color:var(--survey);background:linear-gradient(180deg,#131C28,#0D141C);
+  box-shadow:inset 0 1px 0 #2E4A66,0 0 0 1px rgba(111,168,220,.28)}
+/* core-sample bar: risk composition as strata */
+.core{width:5px;height:100%}
+.card h3{font-family:var(--cond);font-weight:700;font-size:16px;letter-spacing:.01em;display:flex;align-items:center;gap:8px}
+.rec{font-family:var(--mono);font-size:8px;letter-spacing:.11em;color:var(--violet);
+  border:1px solid #3B3168;background:#120F1E;padding:2px 6px}
+.card p{font-size:11.5px;color:#9E9A92;line-height:1.5;margin-top:5px;min-height:34px}
+.mets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:9px}
+.met{border:1px solid var(--rule);background:#0A0E13;padding:5px 8px}
+.met u{display:block;text-decoration:none;font-family:var(--mono);font-size:8px;color:#5A6673;letter-spacing:.1em}
+.met b{font-family:var(--cond);font-weight:700;font-size:19px;letter-spacing:-.01em;line-height:1.15}
+.foot{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+
+/* ---------------------------------------------------------------- footer */
+.ctl{display:flex;align-items:center;gap:16px;padding:0 20px;background:#0C1015;border-top:1px solid var(--rule)}
+.tl{display:flex;align-items:center;flex:1;gap:0}
+.ev{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:9px;color:#6D7A88;letter-spacing:.05em}
+.ev i{width:7px;height:7px;transform:rotate(45deg);display:block}
+.seg{width:26px;height:1px;background:#2B3440;margin:0 9px}
+.btns{display:flex;gap:7px}
+.btn{font-family:var(--cond);font-weight:600;font-size:11.5px;letter-spacing:.06em;padding:7px 14px;
+  border:1px solid var(--rule);background:#141922;color:#A8A49B;clip-path:var(--chamfer)}
+.btn.go{background:#0C2A1E;border-color:#1D6B4C;color:#7FE3B6}
+.btn.no{background:#26100C;border-color:#7A2B1C;color:#F0A78F}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="mark"><b>CAIRN</b><span>MINE OPERATIONS DECISION FABRIC</span></div>
+  <div class="crumbs"><span>SHIFT <b>A · 14:00</b></span><span>SITE <b>NORTH PIT</b></span></div>
+  <div class="state">INCIDENT OPEN</div>
+  <div class="right">
+    <span class="plate warn">SIMULATION ONLY</span>
+    <span class="plate">claude-sonnet-5</span>
+    <span class="plate">policy-2026.09.1</span>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- SIGNATURE: decision loop as bench levels -->
+  <aside class="spine">
+    <h3>DECISION<br>LOOP</h3>
+    <div class="bench">
+      <div class="seam"></div>
+      <div class="lvl done"><span class="rl">RL 260</span><span class="tick">Observe</span></div>
+      <div class="lvl done"><span class="rl">RL 245</span><span class="tick">Correlate</span></div>
+      <div class="lvl done"><span class="rl">RL 230</span><span class="tick">Assess</span></div>
+      <div class="lvl done"><span class="rl">RL 215</span><span class="tick">Options</span></div>
+      <div class="lvl now"><span class="rl">RL 200</span><span class="tick">Policy</span></div>
+      <div class="lvl"><span class="rl">RL 185</span><span class="tick">Approve</span></div>
+      <div class="lvl"><span class="rl">RL 170</span><span class="tick">Act</span></div>
+      <div class="lvl"><span class="rl">RL 155</span><span class="tick">Verify</span></div>
+    </div>
+  </aside>
+
+  <!-- scene, framed as a survey sheet -->
+  <section class="scene">
+    <svg viewBox="0 0 1100 690" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <radialGradient id="dust" cx="30%" cy="56%" r="46%">
+          <stop offset="0%" stop-color="#6A5B45" stop-opacity=".30"/>
+          <stop offset="100%" stop-color="#0A0B0D" stop-opacity="0"/></radialGradient>
+        <linearGradient id="far" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#11131A" stop-opacity=".95"/>
+          <stop offset="1" stop-color="#11131A" stop-opacity="0"/></linearGradient>
+        <linearGradient id="near" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#07080A" stop-opacity="0"/>
+          <stop offset="1" stop-color="#07080A" stop-opacity=".92"/></linearGradient>
+        <linearGradient id="road" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#7A6A52"/><stop offset="1" stop-color="#544838"/></linearGradient>
+      </defs>
+
+      <!-- ground plane: converging survey grid is the cheapest honest depth cue -->
+      <g stroke="#1D232C" stroke-width="1" opacity=".75">
+        <path d="M-200,690 L470,236"/><path d="M60,690 L512,236"/><path d="M320,690 L554,236"/>
+        <path d="M580,690 L596,236"/><path d="M840,690 L638,236"/><path d="M1100,690 L680,236"/>
+        <path d="M1360,690 L722,236"/>
+        <path d="M0,244 L1100,244"/><path d="M0,268 L1100,268"/><path d="M0,306 L1100,306"/>
+        <path d="M0,364 L1100,364"/><path d="M0,448 L1100,448"/><path d="M0,566 L1100,566"/>
+      </g>
+      <rect width="1100" height="250" fill="url(#far)"/>
+      <ellipse cx="330" cy="420" rx="420" ry="230" fill="url(#dust)"/>
+
+      <!-- OPEN PIT: four benches. Each = dark riser wall + lit top face. -->
+      <g transform="translate(322,392)">
+        <g>
+          <path d="M-300,0 A300,152 0 0 0 300,0 L300,30 A300,152 0 0 1 -300,30 Z" fill="#191510"/>
+          <ellipse rx="300" ry="152" fill="#3E3527"/>
+          <path d="M-300,0 A300,152 0 0 1 300,0" fill="none" stroke="#8C7A5C" stroke-width="1.6" opacity=".7"/>
+        </g>
+        <g transform="translate(0,26)">
+          <path d="M-232,0 A232,118 0 0 0 232,0 L232,28 A232,118 0 0 1 -232,28 Z" fill="#15120E"/>
+          <ellipse rx="232" ry="118" fill="#4A4030"/>
+          <path d="M-232,0 A232,118 0 0 1 232,0" fill="none" stroke="#9C8965" stroke-width="1.5" opacity=".72"/>
+        </g>
+        <g transform="translate(0,50)">
+          <path d="M-166,0 A166,85 0 0 0 166,0 L166,26 A166,85 0 0 1 -166,26 Z" fill="#120F0B"/>
+          <ellipse rx="166" ry="85" fill="#564A38"/>
+          <path d="M-166,0 A166,85 0 0 1 166,0" fill="none" stroke="#AE9970" stroke-width="1.4" opacity=".74"/>
+        </g>
+        <g transform="translate(0,72)">
+          <path d="M-104,0 A104,54 0 0 0 104,0 L104,22 A104,54 0 0 1 -104,22 Z" fill="#0E0C09"/>
+          <ellipse rx="104" ry="54" fill="#61543F"/>
+          <path d="M-104,0 A104,54 0 0 1 104,0" fill="none" stroke="#BFA87C" stroke-width="1.3" opacity=".76"/>
+        </g>
+        <ellipse cy="90" rx="52" ry="27" fill="#3A3225"/>
+        <ellipse cy="90" rx="52" ry="27" fill="none" stroke="#7E6E52" stroke-opacity=".5"/>
+      </g>
+      <text x="128" y="596" font-family="IBM Plex Mono" font-size="10" fill="#8A7A62" letter-spacing="2.6">NORTH PIT · BENCH 1–4 · RL 260→155</text>
+
+      <!-- haul roads. Plan route reads as a surveyed line, not a neon tube. -->
+      <path d="M120,436 C280,412 430,390 566,352 C660,326 720,308 776,296"
+            stroke="#6B5C46" stroke-width="9" fill="none" stroke-linecap="round" opacity=".9"/>
+      <path d="M132,318 C240,268 410,246 566,262 C666,272 728,282 780,290"
+            stroke="#2E4A66" stroke-width="10" fill="none" stroke-linecap="round"/>
+      <path d="M132,318 C240,268 410,246 566,262 C666,272 728,282 780,290"
+            stroke="#6FA8DC" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-dasharray="16 9"/>
+      <text x="300" y="262" font-family="IBM Plex Mono" font-size="9.5" fill="#6FA8DC" letter-spacing="1.8">PLANNED · NORTH RAMP</text>
+
+      <path d="M150,506 C310,502 452,486 590,450" stroke="#4A515C" stroke-width="8"
+            fill="none" stroke-linecap="round" stroke-dasharray="12 12" opacity=".85"/>
+      <text x="286" y="530" font-family="IBM Plex Mono" font-size="9.5" font-weight="600"
+            fill="#E2542C" letter-spacing="1.8">CLOSED · EAST RAMP</text>
+
+      <!-- fleet -->
+      <g>
+        <rect x="246" y="396" width="16" height="9" rx="1" fill="#35C08A" transform="rotate(-7 254 400)"/>
+        <rect x="382" y="368" width="16" height="9" rx="1" fill="#35C08A" transform="rotate(-8 390 372)"/>
+        <rect x="498" y="342" width="16" height="9" rx="1" fill="#35C08A" transform="rotate(-9 506 346)"/>
+        <rect x="316" y="278" width="16" height="9" rx="1" fill="#6FA8DC" transform="rotate(-12 324 282)"/>
+        <rect x="466" y="258" width="16" height="9" rx="1" fill="#6FA8DC" transform="rotate(-4 474 262)"/>
+        <g transform="translate(214,470)">
+          <circle r="17" fill="#E2542C" opacity=".15"/><circle r="17" fill="none" stroke="#E2542C" stroke-opacity=".4"/>
+          <rect x="-9" y="-5" width="18" height="10" rx="1" fill="#E2542C"/>
+        </g>
+        <text x="196" y="502" font-family="IBM Plex Mono" font-size="9" fill="#D89A85" letter-spacing="1.2">TRUCK 204 · DOWN</text>
+      </g>
+
+      <!-- plant area, clustered on a plateau right of the pit -->
+      <g transform="translate(794,286)">
+        <circle r="34" fill="#E2542C" opacity=".12"/><circle r="34" fill="none" stroke="#E2542C" stroke-opacity=".32"/>
+        <path d="M-18,16 L-11,-18 L11,-18 L18,16 Z" fill="#E2542C"/>
+        <path d="M-11,-18 L11,-18 L15,-23 L-15,-23 Z" fill="#F58465"/>
+        <text y="46" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#E8E2D6" letter-spacing="1.3">PRIMARY CRUSHER 01</text>
+        <text y="59" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#E2542C" letter-spacing=".9">75% · DERATED</text>
+      </g>
+      <g transform="translate(944,222)">
+        <rect x="-26" y="-16" width="52" height="32" fill="#2E7C5C"/>
+        <rect x="-26" y="-16" width="52" height="5" fill="#4FD9A2"/>
+        <text y="32" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#98A2AC" letter-spacing="1.3">PROCESSING PLANT</text>
+      </g>
+      <g transform="translate(672,442)">
+        <path d="M0,-22 L24,15 L-24,15 Z" fill="#C9910F"/><path d="M0,-22 L24,15 L0,15 Z" fill="#F5B324"/>
+        <text y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#98A2AC" letter-spacing="1.3">ROM STOCKPILE · 6 200 t</text>
+      </g>
+      <g transform="translate(906,470)">
+        <rect x="-27" y="-15" width="54" height="30" fill="#2E7C5C"/>
+        <rect x="-27" y="-15" width="54" height="5" fill="#4FD9A2"/>
+        <text y="31" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#98A2AC" letter-spacing="1.3">MAINTENANCE WORKSHOP</text>
+      </g>
+
+      <!-- rain cell, smaller so it threatens rather than dominates -->
+      <g transform="translate(486,152)">
+        <ellipse rx="128" ry="40" fill="#F5B324" opacity=".07"/>
+        <ellipse rx="128" ry="40" fill="none" stroke="#F5B324" stroke-opacity=".42" stroke-dasharray="6 7"/>
+        <text y="4" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" font-weight="600" fill="#F5B324" letter-spacing="2.4">RAIN CELL · 42 MIN</text>
+        <path d="M8,40 L44,88" stroke="#F5B324" stroke-opacity=".35" stroke-width="1.2" stroke-dasharray="4 5"/>
+      </g>
+
+      <rect y="470" width="1100" height="220" fill="url(#near)"/>
+    </svg>
+
+    <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+    <div class="sceneMeta">SURVEY PLAN <b>NP-14-A</b><br>DATUM <b>AHD</b> · GRID <b>MGA50</b><br>SOURCE <b>SYNTHETIC FIXTURE</b></div>
+    <div class="northArrow"><div>▲</div>N</div>
+    <div class="scaleBar"><i></i>0 &nbsp;&nbsp;&nbsp; 250 &nbsp;&nbsp;&nbsp; 500 m</div>
+    <div class="legend">
+      <s><i style="background:#35C08A"></i>NORMAL</s>
+      <s><i style="background:#F5B324"></i>CONSTRAINED</s>
+      <s><i style="background:#E2542C"></i>FAILED</s>
+      <s><i style="background:#6FA8DC"></i>PLAN</s>
+      <s><i style="background:#5C6470"></i>CLOSED</s>
+    </div>
+  </section>
+
+  <!-- dossier -->
+  <aside class="dossier">
+    <div class="sec">
+      <h2>INCIDENT</h2>
+      <div class="hl">One compound disruption, not five alerts</div>
+      <div class="narr">Primary Crusher 01 has held <em>1 800 t/h against 2 400 t/h nominal</em> since 14:03. Truck 204 went down at 14:08. A rain cell reaches the pit in <em>42 minutes</em>, and the East Ramp closes automatically under a standing geotechnical control.</div>
+      <div class="tags">
+        <span class="tag hot">SEVERITY HIGH</span>
+        <span class="tag">5 EVENTS → 1 INCIDENT</span>
+        <span class="tag warn">42 MIN WINDOW</span>
+        <span class="tag ok">CONFIDENCE 0.86</span>
+      </div>
+      <div class="flag stale"><b>STALE</b><span>evd_fleet_telemetry_stale — last packet for Truck 204 is 15 minutes old. Confirm before relying on it.</span></div>
+      <div class="flag conflict"><b>CONFLICT</b><span>evd_weather_bom vs evd_weather_onsite — both retained; planning uses the earlier arrival.</span></div>
+    </div>
+
+    <div class="sec">
+      <h2>AGENTS</h2>
+      <div class="agents">
+        <div class="agent">
+          <div class="top"><i class="dot"></i><span class="nm">Situation</span><span class="kind">STRANDS AGENT</span></div>
+          <div class="say">Five signals share one haul cycle and one 42-minute window.</div>
+          <div class="rdg"><span>CONF 0.86</span><span>8 EVIDENCE</span><span>9 ms</span></div>
+          <div class="tools"><i>get_recent_events</i><i>get_evidence</i></div>
+        </div>
+        <div class="agent">
+          <div class="top"><i class="dot"></i><span class="nm">Risk and HSE</span><span class="kind">STRANDS AGENT</span></div>
+          <div class="say">Ramp closure is a binding control. Not a discretionary call.</div>
+          <div class="rdg"><span>CONF 0.83</span><span>4 EVIDENCE</span><span>6 ms</span></div>
+          <div class="tools"><i>get_weather_window</i><i>get_evidence</i></div>
+        </div>
+        <div class="agent">
+          <div class="top"><i class="dot" style="background:var(--violet)"></i><span class="nm">Policy review</span><span class="kind det">DETERMINISTIC · NO MODEL</span></div>
+          <div class="say">2 action types evaluated against policy-2026.09.1</div>
+          <div class="rdg"><span>TIER 3 → ESCALATE</span><span>0 MODEL CALLS</span></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- options -->
+<section class="rail">
+  <div class="railhead">
+    <h2>RECOVERY OPTIONS</h2>
+    <p>Under the supplied weights, <b>Recover tonnes</b> scores highest while respecting the binding route closure, and returns <b>+1 600 t</b> against Protect safety.</p>
+  </div>
+  <div class="cards">
+    <article class="card">
+      <div class="core" style="background:linear-gradient(180deg,#35C08A 0 70%,#F5B324 70% 100%)"></div>
+      <div>
+        <h3>Protect safety</h3>
+        <p>Close the exposed ramp now, stand the cycle down early, accept lower tonnes.</p>
+        <div class="mets">
+          <div class="met"><u>TONNES</u><b>+1 300</b></div>
+          <div class="met"><u>RECOVERY</u><b>95<small style="font-size:11px">m</small></b></div>
+          <div class="met"><u>FEED</u><b style="color:var(--haematite)">−18%</b></div>
+        </div>
+        <div class="foot"><span class="tag ok">SAFETY LOW</span><span class="tag">SHIFT_BOSS</span></div>
+      </div>
+    </article>
+
+    <article class="card sel">
+      <div class="core" style="background:linear-gradient(180deg,#35C08A 0 42%,#F5B324 42% 84%,#E2542C 84% 100%)"></div>
+      <div>
+        <h3>Recover tonnes <span class="rec">RECOMMENDED</span></h3>
+        <p>Close the ramp at the control threshold, reroute to the North Ramp, draw the stockpile buffer.</p>
+        <div class="mets">
+          <div class="met"><u>TONNES</u><b style="color:var(--malachite)">+2 900</b></div>
+          <div class="met"><u>RECOVERY</u><b>60<small style="font-size:11px">m</small></b></div>
+          <div class="met"><u>FEED</u><b>−6%</b></div>
+        </div>
+        <div class="foot"><span class="tag warn">SAFETY MEDIUM</span><span class="tag">SHIFT_BOSS</span><span class="tag">CONF 0.82</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="core" style="background:linear-gradient(180deg,#35C08A 0 30%,#F5B324 30% 78%,#E2542C 78% 100%)"></div>
+      <div>
+        <h3>Preserve equipment</h3>
+        <p>Cap crusher feed, close the ramp, queue the inspection when the crew frees at 16:10.</p>
+        <div class="mets">
+          <div class="met"><u>TONNES</u><b>+1 900</b></div>
+          <div class="met"><u>RECOVERY</u><b>140<small style="font-size:11px">m</small></b></div>
+          <div class="met"><u>FEED</u><b style="color:var(--haematite)">−30%</b></div>
+        </div>
+        <div class="foot"><span class="tag warn">SAFETY MEDIUM</span><span class="tag">SHIFT_BOSS + MAINT</span></div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<footer class="ctl">
+  <div class="tl">
+    <span class="ev"><i style="background:#E2542C"></i>14:03 CRUSHER DERATE</span><span class="seg"></span>
+    <span class="ev"><i style="background:#E2542C"></i>14:08 TRUCK 204 DOWN</span><span class="seg"></span>
+    <span class="ev"><i style="background:#E2542C"></i>14:12 RAIN FORECAST</span><span class="seg"></span>
+    <span class="ev"><i style="background:#F5B324"></i>14:17 CREW COMMITTED</span><span class="seg"></span>
+    <span class="ev"><i style="background:#F5B324"></i>14:18 TARGET AT RISK</span>
+  </div>
+  <div class="btns">
+    <span class="btn">Inject event</span>
+    <span class="btn go">Approve as SHIFT_BOSS</span>
+    <span class="btn no">Attempt interlock override</span>
+    <span class="btn">Audit trace</span>
+    <span class="btn">Reset</span>
+  </div>
+</footer>
+
+</body>
+</html>
