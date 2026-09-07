@@ -79,3 +79,62 @@ async def test_every_action_is_simulation_only(analysed_run):
         assert record.simulated is True
         assert record.artefact_ref.startswith("SIM-")
         assert "simulation" in record.artefact["system"].lower()
+
+
+async def test_an_unknown_outcome_blocks_a_retry_even_when_the_approval_expired(analysed_run):
+    """The reconciliation guard must outrank approval validation.
+
+    Answering APPROVAL_EXPIRED here would tell the operator to fetch a fresh approval
+    for an action that may already have applied.
+    """
+    from datetime import timedelta
+
+    from app.domain.models import utcnow
+
+    approval = await _approved(analysed_run)
+    analysed_run.simulate_action_timeout(actor_id="u", actor_roles=["SHIFT_BOSS"])
+    analysed_run.approval = approval.model_copy(update={"expires_at": utcnow() - timedelta(seconds=1)})
+
+    with pytest.raises(ActionRejected) as excinfo:
+        analysed_run.execute_approved_actions(actor_id="u", actor_roles=["SHIFT_BOSS"])
+    assert excinfo.value.code == "RECONCILIATION_REQUIRED"
+
+
+async def test_any_transport_failure_resolves_the_claim_rather_than_escaping(analysed_run):
+    """An escaping exception would strand the idempotency key as IN_PROGRESS forever."""
+    from app.domain.models import ActionStatus
+
+    await _approved(analysed_run)
+
+    def broken(_request):
+        raise ConnectionResetError("connection reset by the simulated work-order system")
+
+    records = analysed_run.execute_approved_actions(
+        actor_id="u", actor_roles=["SHIFT_BOSS"], transport=broken
+    )
+    assert records and all(r.status is ActionStatus.UNKNOWN for r in records)
+    assert all("ConnectionResetError" in r.message for r in records)
+    assert analysed_run.gateway.simulation_store == {}
+    # And the stranded claim is reconcilable rather than stuck.
+    resolved = analysed_run.reconcile_action(records[0].action_id, applied=False, actor_id="u")
+    assert resolved.status is ActionStatus.FAILED
+
+
+async def test_reconciliation_passes_through_the_declared_intermediate_state(analysed_run):
+    """05 5.7 declares UNKNOWN -> RECONCILING -> SUCCEEDED/FAILED."""
+    await _approved(analysed_run)
+    records = analysed_run.simulate_action_timeout(actor_id="u", actor_roles=["SHIFT_BOSS"])
+    analysed_run.reconcile_action(records[0].action_id, applied=True, actor_id="u")
+    stages = [e.stage for e in analysed_run.view().audit]
+    assert "ACTION_UNKNOWN" in stages
+    assert "ACTION_RECONCILING" in stages
+    assert stages.index("ACTION_RECONCILING") > stages.index("ACTION_UNKNOWN")
+    assert "ACTION_RECONCILED" in stages
+
+
+async def test_the_timeout_override_does_not_leak_onto_the_shared_gateway(analysed_run):
+    """A per-call override; a concurrent action must not be dragged through it."""
+    default = analysed_run.gateway.transport
+    await _approved(analysed_run)
+    analysed_run.simulate_action_timeout(actor_id="u", actor_roles=["SHIFT_BOSS"])
+    assert analysed_run.gateway.transport is default

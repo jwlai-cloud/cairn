@@ -48,6 +48,16 @@ jobs:
       - name: Safety suite must be green on its own
         run: uv run --no-project python -m pytest tests/safety -q
 
+      - name: Evaluation gate (docs/architecture/06 6.4 and 6.8)
+        run: uv run --no-project python -m app.evaluation --json evaluation-report.json
+
+      - name: Upload the evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-report
+          path: evaluation-report.json
+
       - name: Deterministic replay must be stable across processes
         run: |
           set -euo pipefail

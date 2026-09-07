@@ -50,7 +50,7 @@ from app.domain.models import (
 )
 from app.integrations.fixture_source import FixtureSource
 from app.policy.decisions import PolicyService
-from app.tools.action_tools import ActionGateway, ActionRejected
+from app.tools.action_tools import ActionGateway, ActionRejected, ExternalTimeout
 from app.tools.proposal_tools import (
     calculate_production_impact,
     check_spatial_temporal_conflicts,
@@ -473,7 +473,7 @@ class Run:
 
     # -------------------------------------------------------------------- actions
 
-    def execute_approved_actions(self, *, actor_id: str, actor_roles: list[str]) -> list:
+    def execute_approved_actions(self, *, actor_id: str, actor_roles: list[str], transport=None) -> list:
         if self.approval is None or self.selected_scenario_id is None:
             raise ActionRejected("APPROVAL_REQUIRED", "Nothing has been approved.")
         option = self.scenario(self.selected_scenario_id)
@@ -502,11 +502,18 @@ class Run:
             )
             records.append(
                 self.gateway.execute(
-                    request, approval=self.approval, actor_roles=actor_roles, evidence=self.evidence
+                    request,
+                    approval=self.approval,
+                    actor_roles=actor_roles,
+                    evidence=self.evidence,
+                    transport=transport,
                 )
             )
 
-        self.approval = self.approval.model_copy(update={"status": ApprovalStatus.CONSUMED})
+        from app.domain.models import ActionStatus
+
+        if not any(r.status is ActionStatus.UNKNOWN for r in records):
+            self.approval = self.approval.model_copy(update={"status": ApprovalStatus.CONSUMED})
         node.status = NodeStatus.COMPLETED
         node.headline = f"{len(records)} simulated artefact(s) created"
         node.findings = [f"{r.action_type.value} -> {r.artefact_ref}" for r in records]
@@ -528,6 +535,26 @@ class Run:
             payload={"assetId": "asset_primary_crusher_01", "requestedBy": actor_id},
         )
         return self.gateway.execute(request, approval=self.approval, actor_roles=actor_roles, evidence=self.evidence)
+
+    def simulate_action_timeout(self, *, actor_id: str, actor_roles: list[str]):
+        """Run the approved actions against an external system that times out.
+
+        Exercises the case from docs/architecture/06 6.4 #9: the call may already have
+        applied, so the action must land in UNKNOWN rather than be retried blindly.
+
+        The override is passed per call rather than swapped onto the shared gateway, so
+        a concurrent action on the same run cannot be dragged through it.
+        """
+
+        def timing_out(_request):
+            raise ExternalTimeout("no response from the simulated work-order system after 30s")
+
+        return self.execute_approved_actions(
+            actor_id=actor_id, actor_roles=actor_roles, transport=timing_out
+        )
+
+    def reconcile_action(self, action_id: str, *, applied: bool, actor_id: str):
+        return self.gateway.reconcile(action_id, applied=applied, actor_id=actor_id)
 
     # -------------------------------------------------------------------- outcome
 

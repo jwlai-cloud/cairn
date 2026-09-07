@@ -80,9 +80,12 @@ TOOL_PLANS: dict[str, tuple[tuple[str, dict], ...]] = {
     "reliability": (
         ("get_maintenance_constraints", {}),
         ("get_asset_status", {"asset_id": "asset_primary_crusher_01"}),
+        ("get_evidence", {}),
     ),
     "operations": (("get_production_constraints", {}),),
-    "risk": (("get_weather_window", {}),),
+    # The risk prompt requires it to report missing evidence, so it has to read the
+    # evidence set rather than reason about hazards from the weather alone.
+    "risk": (("get_weather_window", {}), ("get_evidence", {})),
     "scenario_planner": (),
 }
 
