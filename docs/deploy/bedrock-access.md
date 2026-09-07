@@ -50,8 +50,13 @@ model it lands on. Granting only the profile denies at the routed region, which 
 a model problem and is not one. Foundation-model ARNs carry no account id, so the region
 wildcard covers every routed region in 239 characters.
 
+The `openai.*` and `project/default` entries are both needed for GPT-5.6 Luna. OpenAI
+models on Bedrock authorise against a project resource as well as the model, which is
+recorded in ADR-004 and is not obvious from the error: without it the call fails on
+`project/default` rather than on the model.
+
 **2. Enable the models** that are not already enabled. Bedrock console, us-east-1, Model
-access: Anthropic Claude Sonnet 5 and Claude Haiku 4.5. Nova needs nothing - invoking
+access: Anthropic Claude Sonnet 5, Claude Haiku 4.5, and GPT-5.6 Luna. Nova needs nothing - invoking
 `amazon.nova-micro-v1:0`, which the pre-existing grant already allowed, returned a real
 completion in 225 ms, so Nova model access is live in this account and the only thing
 missing for Nova Lite was the ARN.
