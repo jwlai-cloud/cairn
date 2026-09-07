@@ -97,3 +97,56 @@ async def test_two_runs_sharing_a_store_keep_separate_ledgers(tmp_path):
     assert len(b.view().audit) == 1
     assert len(store.entries_for_correlation(CORRELATION_ID)) == 6
     store.close()
+
+
+def test_refs_round_trip_with_the_same_shape_through_both_stores(tmp_path):
+    """An entry read back from disk must look identical to the one held in memory."""
+    from datetime import datetime, timezone
+
+    from app.domain.models import Severity, ToolCallRecord
+
+    refs = {
+        "toolCall": ToolCallRecord(tool_name="get_evidence", status="success", duration_ms=3),
+        "severity": Severity.HIGH,
+        "at": datetime(2026, 9, 6, 14, 3, tzinfo=timezone.utc),
+        "evidenceIds": ("evd_a", "evd_b"),
+        "nested": {"count": 2, "flags": [True, False]},
+        "dropped": None,
+    }
+
+    memory = AuditLedger(CORRELATION_ID, store=InMemoryAuditStore())
+    durable = AuditLedger(CORRELATION_ID, store=SqliteAuditStore(tmp_path / "audit.sqlite3"))
+    memory.record("TOOL_CALL", "risk", "read the evidence", **refs)
+    durable.record("TOOL_CALL", "risk", "read the evidence", **refs)
+
+    assert memory.entries[0].refs == durable.entries[0].refs
+    assert "dropped" not in durable.entries[0].refs
+    assert durable.entries[0].refs["severity"] == "HIGH"
+    assert durable.entries[0].refs["evidenceIds"] == ["evd_a", "evd_b"]
+    assert durable.entries[0].refs["toolCall"]["toolName"] == "get_evidence"
+    durable.store.close()
+
+
+def test_a_failed_append_does_not_consume_a_sequence_number():
+    """A gap in the chain would be indistinguishable from a deleted entry."""
+
+    class FlakyStore(InMemoryAuditStore):
+        fail_next = False
+
+        def append(self, correlation_id, run_key, entry):
+            if self.fail_next:
+                self.fail_next = False
+                raise sqlite3.OperationalError("database is locked")
+            super().append(correlation_id, run_key, entry)
+
+    store = FlakyStore()
+    ledger = AuditLedger(CORRELATION_ID, store=store)
+    ledger.record("EVENT_INGESTED", "a", "first")
+
+    store.fail_next = True
+    with pytest.raises(sqlite3.OperationalError):
+        ledger.record("EVENT_INGESTED", "b", "lost to a locked database")
+
+    ledger.record("EVENT_INGESTED", "c", "next successful entry")
+    seqs = [e.seq for e in ledger.entries]
+    assert seqs == [1, 2], f"sequence must not skip a number, got {seqs}"

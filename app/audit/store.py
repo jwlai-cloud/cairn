@@ -1,6 +1,6 @@
 """Audit storage.
 
-docs/architecture/04 4.8 requires the audit record to be append-only to application
+docs/architecture/04-security-governance-and-safety.md 4.8 requires the audit record to be append-only to application
 users and replayable without the original conversational state. In-memory storage
 satisfies "append-only" only by convention and loses everything on restart, which is
 why AR-15 was the one requirement left unmet.
@@ -92,23 +92,30 @@ class SqliteAuditStore:
             (
                 correlation_id, run_key, entry.seq, entry.at.isoformat(),
                 entry.stage, entry.actor, entry.summary,
-                json.dumps(entry.refs, default=str),
+                json.dumps(entry.refs),
             ),
         )
         self._connection.commit()
 
-    def _query(self, where: str, value: str) -> list[AuditEntry]:
-        cursor = self._connection.execute(
-            f"SELECT seq, at, stage, actor, summary, refs FROM audit_entries WHERE {where} = ? ORDER BY id",
-            (value,),
-        )
-        return [_to_entry(row) for row in cursor.fetchall()]
+    # Both queries are written out in full rather than built by interpolation. The
+    # column name is internal, but a query assembled with an f-string is a habit worth
+    # not having in a file whose whole purpose is an audit trail.
+    _SELECT_BY_RUN = (
+        "SELECT seq, at, stage, actor, summary, refs FROM audit_entries "
+        "WHERE run_key = ? ORDER BY id"
+    )
+    _SELECT_BY_CORRELATION = (
+        "SELECT seq, at, stage, actor, summary, refs FROM audit_entries "
+        "WHERE correlation_id = ? ORDER BY id"
+    )
 
     def entries_for_run(self, run_key: str) -> list[AuditEntry]:
-        return self._query("run_key", run_key)
+        cursor = self._connection.execute(self._SELECT_BY_RUN, (run_key,))
+        return [_to_entry(row) for row in cursor.fetchall()]
 
     def entries_for_correlation(self, correlation_id: str) -> list[AuditEntry]:
-        return self._query("correlation_id", correlation_id)
+        cursor = self._connection.execute(self._SELECT_BY_CORRELATION, (correlation_id,))
+        return [_to_entry(row) for row in cursor.fetchall()]
 
     def close(self) -> None:
         self._connection.close()
