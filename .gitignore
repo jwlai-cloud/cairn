@@ -21,6 +21,8 @@ sessions/local/
 
 # Demo recordings and their intermediates are large and regenerable. The scripts that
 # produce them are source and must stay tracked, so ignore the media, not the folder.
+captures/*.wav
+captures/*.aiff
 captures/*.webm
 captures/*.mp4
 captures/*.mov

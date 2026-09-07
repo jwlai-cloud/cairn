@@ -18,7 +18,7 @@ captions carry the claim if the voice does not.
 | 0:00 | 26s | ~65 | Eight hours into a twelve-hour shift at an open-pit iron ore mine. Four systems are each about to be completely right, and useless. Plant control knows the crusher is down to seventy-five per cent. Fleet management knows a haul truck has stopped. The weather service knows rain closes the main ramp in forty-two minutes. Maintenance knows the only crew is committed until ten past four. Not one of them knows those are the same problem. |
 | 0:26 | 12s | ~30 | CAIRN does the thing none of them can. Five signals, four source systems — one compound disruption, with a forty-two minute decision window. |
 | 0:38 | 18s | ~45 | Four specialists run in parallel inside a bounded Strands graph. Bounded matters: a fixed node budget, a hard timeout, and edges that carry typed findings — so what each specialist concluded actually reaches the planner, instead of just an ordering. |
-| 0:56 | 16s | ~40 | Every claim carries an evidence id. And where the evidence is bad, it says so rather than smoothing it over. Truck 204's telemetry is fifteen minutes stale — flagged, not quietly used. Two weather sources disagree by thirteen minutes. Both are kept. |
+| 0:56 | 16s | ~40 | Every claim carries an evidence id. Where the evidence is bad, it says so. Truck 204's telemetry is fifteen minutes stale — flagged, not quietly used. Two weather sources disagree by thirteen minutes. Both are kept. |
 | 1:12 | 10s | ~25 | The plan uses the earlier arrival, because that is the conservative one. Tool calls, evidence counts, confidence, measured durations — all on the record. |
 | 1:22 |  9s | ~22 | Three options, and they trade different things away. Protect safety: stand down early, four thousand nine hundred tonnes. |
 | 1:31 |  8s | ~20 | Preserve equipment: cap the crusher, six thousand one hundred, and the inspection still gets done. |
@@ -29,9 +29,9 @@ captions carry the claim if the voice does not.
 | 2:44 | 16s | ~40 | Real systems time out. Approved plan, dispatch call, and no answer — after the call may already have applied. A naive agent retries, and raises the work order twice. |
 | 3:00 | 14s | ~35 | CAIRN holds the outcome in UNKNOWN and refuses to retry, because it cannot prove the first call didn't land. Ask it to try again and it says no: reconciliation required. |
 | 3:14 | 12s | ~30 | It stays unknown until something authoritative confirms it. Then, and only then — UNKNOWN, to RECONCILING, to SUCCEEDED. |
-| 3:26 | 10s | ~25 | Every artefact is simulation-only. Nothing here touches a mine system, a PLC, or a dispatch queue. There is no control path at all, by design. |
+| 3:26 | 10s | ~25 | Every artefact is simulation-only. Nothing here touches a mine system, a PLC, or a dispatch queue. There is no control path, by design. |
 | 3:36 | 14s | ~35 | And the whole decision reconstructs. This was built as a TOGAF ADM cycle, not a demo with an architecture diagram bolted on afterwards. An HSE authority asks one question: can this thing waive a safety control? |
-| 3:50 | 10s | ~25 | That becomes principle PR-05, requirement AR-05, building block SBB-04, one file, and one test. One question, five artefacts, one test — for every requirement. |
+| 3:50 | 10s | ~25 | That becomes principle PR-05, requirement AR-05, building block SBB-04, one file, and one test — for every requirement. |
 | 4:00 | 10s | ~25 | A hundred and eight tests. Thirteen of thirteen evaluation cases. It recommends. It does not authorise. |
 
 ## Recording it
