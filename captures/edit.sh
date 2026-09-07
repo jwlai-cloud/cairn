@@ -1,56 +1,78 @@
 #!/usr/bin/env bash
-# Cut a raw capture down to a submission video.
+# Assemble the submission video from the app recording and the slide recording.
 #
-#   ./captures/edit.sh raw.webm [out.mp4] [beats.json]
+#   ./captures/edit.sh                      # uses the newest raw takes
+#   ./captures/edit.sh app.webm slides.webm out.mp4
 #
-# There is no segment table and no speed ramp. The raw take already fits the five
-# minute cap, and speeding a beat up costs the narration its room: captures/narration.md
-# is written to these durations, and a beat compressed 2x has half the words. Speed is
-# worth reintroducing for exactly one thing - a live model inference with nothing being
-# said over it - and it should arrive then, per beat, not as a standing setting.
+# Three sources in order: the app up to the reconcile beat, the three TOGAF frames, then
+# the app's audit and close beats. capture.mjs tags its beats pre and post, so the split
+# point is read rather than hand-written.
 #
-# The recording does not play back at the speed it was made. Playwright stamps frames at
-# a nominal 25fps, but a page running a 3D scene renders slower than that, so a session
-# that took 253 seconds comes out as 281 seconds of video playing eleven per cent slow -
-# which is both visibly sluggish and enough to put the denial caption twelve seconds off
-# its own toast. The ratio is uniform; it held to within a frame across beats forty
-# seconds apart. So restore real time first, and then the wall clock times that
-# capture.mjs measured into captures/beats.json are the output times, exactly. Nothing
-# downstream is hand-timed or rescaled.
+# Neither recording plays back at the speed it was made. Playwright stamps frames at a
+# nominal rate while a page running a 3D scene renders slower, so a session comes out
+# around eleven per cent long and fractionally slow. Each source is corrected by its own
+# measured ratio before anything is cut, after which the cue sheet's times are the output
+# times and captions need no rescaling.
+#
+# There is no speed ramp. The cut already fits the cap, and compressing a beat costs the
+# narration its room.
 set -euo pipefail
 
-RAW="${1:?usage: edit.sh <raw.webm> [out.mp4] [beats.json]}"
-OUT="${2:-captures/cairn-demo.mp4}"
-BEATS="${3:-captures/beats.json}"
-WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
+cd "$(dirname "$0")/.."
+APP="${1:-$(ls -t captures/raw-app*.webm 2>/dev/null | head -1)}"
+SLIDES="${2:-$(ls -t captures/raw-slides*.webm 2>/dev/null | head -1)}"
+OUT="${3:-captures/cairn-silent.mp4}"
+BEATS=captures/beats.json
+: "${APP:?no app recording found: run node captures/capture.mjs}"
+: "${SLIDES:?no slide recording found: run node captures/capture-slides.mjs --video}"
 
-VIDEO_SECS=$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$RAW")
+WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
+probe() { ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$1"; }
+APP_SECS=$(probe "$APP"); SLIDE_SECS=$(probe "$SLIDES")
 
-# SLOWDOWN is how much longer the video is than the session; START is the first beat, in
-# video time, which trims the page load and reset preamble off the front.
-read -r SLOWDOWN START < <(python3 - "$BEATS" "$VIDEO_SECS" <<'PY'
+read -r K PRE_START PRE_DUR POST_START < <(python3 - "$BEATS" "$APP_SECS" <<'PY'
 import json, sys
 beats = json.load(open(sys.argv[1]))
-slowdown = float(sys.argv[2]) / (beats[-1]["at"] + beats[-1]["seconds"])
-print(f'{slowdown:.6f} {beats[0]["at"] * slowdown:.3f}')
+video = float(sys.argv[2])
+# The recording is longer than the session by a uniform ratio.
+k = video / (beats[-1]["at"] + beats[-1]["seconds"])
+pre = [b for b in beats if b["section"] == "pre"]
+post = [b for b in beats if b["section"] == "post"]
+start = beats[0]["at"] * k                      # trims the load and reset preamble
+pre_end = (pre[-1]["at"] + pre[-1]["seconds"]) * k
+print(f'{k:.6f} {start:.3f} {pre_end - start:.3f} {post[0]["at"] * k:.3f}')
 PY
 )
 
-python3 captures/captions.py "$BEATS" > "$WORK/captions.ass"
+echo "app $APP_SECS s, slowdown ${K}x"
+echo "  pre    ${PRE_START}s for ${PRE_DUR}s"
+echo "  slides $SLIDE_SECS s"
+echo "  post   from ${POST_START}s"
 
-# setpts restores real time, so captions can be burned at their measured wall times.
-# They go on after the upscale, so the type is rendered at 4K rather than scaled up into
-# it, and the .ass header declares that frame so libass sizes against it.
-echo "cutting $RAW from ${START}s, correcting ${SLOWDOWN}x slowdown"
-ffmpeg -v error -y -ss "$START" -i "$RAW" \
-  -vf "setpts=PTS/${SLOWDOWN},scale=3840:-2:flags=lanczos,ass=filename='$WORK/captions.ass'" \
-  -an -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -r 30 "$OUT"
+# Every source is normalised to the same size, rate and pixel format so concat can copy.
+cut() { # cut <in> <ss> <t|-> <slowdown> <out>
+  local t=()
+  [ "$3" != "-" ] && t=(-t "$3")
+  ffmpeg -v error -y -ss "$2" "${t[@]}" -i "$1" \
+    -vf "setpts=PTS/${4},scale=3840:2400:force_original_aspect_ratio=decrease,pad=3840:2400:-1:-1:color=#DEDACF,setsar=1" \
+    -an -c:v libx264 -preset medium -crf 19 -pix_fmt yuv420p -r 30 "$5"
+}
 
-total=$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$OUT")
-secs=${total%.*}
+SLIDE_K=$(python3 -c "print(f'{float('$SLIDE_SECS')/63.0:.6f}')")   # slides hold 24+25+14
+cut "$APP"    "$PRE_START"  "$PRE_DUR" "$K"       "$WORK/1-pre.mp4"
+cut "$SLIDES" 0             -          "$SLIDE_K" "$WORK/2-slides.mp4"
+cut "$APP"    "$POST_START" -          "$K"       "$WORK/3-post.mp4"
+
+for f in "$WORK"/[123]-*.mp4; do printf "file '%s'\n" "$f" >> "$WORK/list.txt"; done
+ffmpeg -v error -y -f concat -safe 0 -i "$WORK/list.txt" -c copy "$WORK/joined.mp4"
+
+# Captions ride the assembled timeline, which is the cue sheet's timeline.
+python3 captures/captions.py --assembled > "$WORK/captions.ass"
+ffmpeg -v error -y -i "$WORK/joined.mp4" -vf "ass=filename='$WORK/captions.ass'" \
+  -c:v libx264 -preset medium -crf 19 -pix_fmt yuv420p -r 30 "$OUT"
+
+total=$(probe "$OUT"); secs=${total%.*}
 printf '\n%s\n' "$OUT"
-printf 'runtime: %d:%02d  (5:00 cap, %ds of headroom)\n' \
-  "$((secs / 60))" "$((secs % 60))" "$((300 - secs))"
+printf 'runtime: %d:%02d  (5:00 cap, %ds of headroom)\n' "$((secs/60))" "$((secs%60))" "$((300-secs))"
 ffprobe -v error -select_streams v:0 -show_entries stream=width,height,r_frame_rate -of default=nw=1 "$OUT"
 ls -lh "$OUT" | awk '{print "size:", $5}'

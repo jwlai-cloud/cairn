@@ -1,85 +1,49 @@
 #!/usr/bin/env python3
-"""Emit burned-in captions for the demo cut.
+"""Burn-in captions for the assembled cut.
 
-The video carries no narration track, so the captions are the argument. Each one
-states what the beat *proves*, not what is on screen - a judge watching muted, or at
-360p on a phone, has to be able to follow the claim without the voiceover.
+These are not subtitles. The narration carries the story; a caption states the claim the
+beat proves, so a judge watching muted, or at 360p on a phone, can still follow it. They
+are deliberately shorter than what is spoken.
 
-Timings come from captures/beats.json, the wall clock times capture.mjs measured. They
-are also the output times, because edit.sh restores real time before burning these in:
-the raw recording plays about eleven per cent slow, and captions cut to the raw timeline
-miss their own shots by up to twelve seconds. Captions key off the beat label rather
-than a time, so a re-record re-times them with no edit here.
+The three TOGAF frames get none. They carry their own text, and a caption over a slide is
+two captions arguing.
 
-ASS rather than SRT, purely so the header can declare the frame it was written for.
-libass assumes 288 lines for a plain subtitle file, so a size chosen for a 2400-line
-frame gets scaled up by eight and fills the screen.
+Timings come from captures/narration.md, keyed by cue timecode. That file is the plan and
+edit.sh assembles the output to match it, so those times are the output times. Keying by
+timecode rather than by beat label means a re-record does not silently drop a caption:
+a cue whose time moves is reported, not skipped.
 
-    python3 captures/captions.py [beats.json] > captions.ass
+ASS rather than SRT, so the header can declare the frame it was written for. libass
+assumes 288 lines for a plain subtitle file, and a size chosen for a 2400-line frame gets
+scaled up by eight and fills the screen.
+
+    python3 captures/captions.py --assembled > captions.ass
 """
-import json
 import pathlib
+import re
 import sys
 
 HERE = pathlib.Path(__file__).parent
+SHEET = HERE / "narration.md"
+CUE = re.compile(r"^\|\s*(\d+):(\d{2})\s*\|\s*(\d+)s\s*\|")
 
-# Keyed by the beat labels in capture.mjs. Two lines maximum - a third does not fit the
-# safe area. A beat with no entry here plays without a caption.
-CAPTIONS = {
-    "Normal shift: 16 900 t of 28 000 t, eight trucks, no alerts":
-        "Eight hours into a twelve-hour shift.\n"
-        "Four systems, each about to be exactly right - and useless.",
-    "Five signals from four systems land on the timeline":
-        "Five signals. Four source systems.\n"
-        "Not one of them knows they are the same incident.",
-    "Four specialists in parallel; spine fills with measured durations":
-        "Four specialists run in parallel in a bounded Strands graph.\n"
-        "The edges carry typed findings, not just execution order.",
-    "STALE telemetry and a 13-minute source CONFLICT, both surfaced":
-        "Bad evidence is surfaced, not smoothed over.\n"
-        "Telemetry stale by 15 min. Two forecasts disagree - both kept.",
-    "Agent cards: tool chips, evidence counts, confidence, durations":
-        "Every claim carries an evidence id, a confidence,\n"
-        "and a measured duration.",
-    "Protect safety: +4 900 t, LOW risk":
-        "Protect safety: stand down early. +4 900 t.",
-    "Preserve equipment: +6 100 t, crusher capped":
-        "Preserve equipment: cap the crusher. +6 100 t.",
-    "Recover tonnes: +7 600 t, recommended, reason shown":
-        "Recover tonnes: reroute, draw the stockpile. +7 600 t.\n"
-        "All three respect the ramp closure. None may trade it away.",
-    "DENIED: rule T4-PROHIBITED-INTERLOCK, tier 4, no model call":
-        "DENIED. Tier 4, rule T4-PROHIBITED-INTERLOCK.\n"
-        "Decided by deterministic policy - with no model call at all.",
-    "Policy escalates to a named role":
-        "Even a permitted action does not just happen.\n"
-        "Policy escalates it to a named, accountable role.",
-    "Scoped approval: token bound to plan version and evidence hash":
-        "The approval is scoped to those assets, bound to the plan version\n"
-        "and the evidence hash, expiring, and good exactly once.",
-    "Dispatch times out AFTER the call may have applied -> UNKNOWN":
-        "Dispatch times out AFTER the call may already have applied.\n"
-        "The outcome is held as UNKNOWN.",
-    "Blind retry REFUSED: RECONCILIATION_REQUIRED":
-        "A blind retry is REFUSED: RECONCILIATION_REQUIRED.\n"
-        "It cannot prove the first call did not land.",
-    "Reconciled: UNKNOWN -> RECONCILING -> SUCCEEDED":
-        "Only an authoritative source closes it.\n"
-        "UNKNOWN, then RECONCILING, then SUCCEEDED.",
-    "Outcome verified: truck still down, residual risks still open":
-        "Simulation only. The truck is still down and the residual\n"
-        "risks are still open - the outcome is not flattered.",
-    "Audit: event -> evidence -> findings -> policy -> approval -> action -> outcome":
-        "The whole decision reconstructs: event, evidence, findings,\n"
-        "policy, approval, action, outcome.",
-    "Scroll the full chain":
-        "An append-only ledger. Every stage writes to it,\n"
-        "and nothing can rewrite it.",
-    "Reset: the same fixtures replay to the same decision":
-        "The same fixtures replay to the same decision, exactly.",
+# Keyed by cue timecode. Two lines maximum; a third does not fit the safe area.
+CAPTIONS: dict[str, str] = {
+    "0:00": "A decision layer for a mine shift.\nIt recommends. It never authorises.",
+    "0:22": "Synthetic scenario. Four systems, each correct.\nNone of them sees the combined decision.",
+    "0:43": "The decision loop. Agents interpret evidence.\nPolicy, approval and execution stay deterministic.",
+    "1:02": "A bounded Strands graph.\nFour specialists in parallel, not a chain of handovers.",
+    "1:22": "Each specialist returns a structured finding.\nEvidence and uncertainty travel with it.",
+    "1:42": "Fifteen minutes stale, and marked stale.\nTwo forecasts disagree, and both are kept.",
+    "1:58": "Three options, each giving up something different.\nA visible trade-off, with evidence behind it.",
+    "2:17": "DENIED by a deterministic policy service.\nNo model call. Nothing to talk past.",
+    "2:41": "Approval bound to a named role and this plan version.\nExpiring, and good exactly once.",
+    "3:00": "Timed out after the call may have applied.\nHeld UNKNOWN. A blind retry is refused.",
+    # 3:24, 3:48 and 4:13 are the TOGAF frames. They carry their own text.
+    "4:27": "Event, evidence, findings, policy,\napproval, action, outcome.",
+    "4:38": "It recommends. It does not authorise.",
 }
 
-# Written for the 4K cut. Sizes are in these units, so they survive any output scale.
 WIDTH, HEIGHT = 3840, 2400
 
 HEADER = f"""[Script Info]
@@ -105,25 +69,31 @@ def stamp(seconds: float) -> str:
     return f"{h:d}:{m:02d}:{s:02d}.{cs:02d}"
 
 
+def cues() -> list[tuple[str, float, int]]:
+    out = []
+    for line in SHEET.read_text().splitlines():
+        m = CUE.match(line)
+        if m:
+            out.append((f"{int(m[1])}:{m[2]}", int(m[1]) * 60 + int(m[2]), int(m[3])))
+    return out
+
+
 def main() -> None:
-    path = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "beats.json"
-    beats = json.loads(path.read_text())
+    if "--assembled" not in sys.argv:
+        sys.exit("only --assembled is supported; the cut is assembled from two sources")
 
-    unknown = {b["label"] for b in beats} - set(CAPTIONS)
+    sheet = cues()
+    unknown = set(CAPTIONS) - {key for key, _, _ in sheet}
     if unknown:
-        # A renamed beat would otherwise silently lose its caption.
-        print(f"beat with no caption: {sorted(unknown)[0]!r}", file=sys.stderr)
-        raise SystemExit(1)
+        # A caption keyed to a cue that no longer exists would silently never show.
+        sys.exit(f"caption keyed to a cue that is not in the sheet: {sorted(unknown)}")
 
-    # The cut starts at the first beat, so drop the load and reset preamble with it.
-    origin = beats[0]["at"]
     print(HEADER)
-    for b in beats:
-        text = CAPTIONS[b["label"]]
+    for key, at, hold in sheet:
+        text = CAPTIONS.get(key)
         if not text:
             continue
-        start, end = b["at"] - origin, b["at"] + b["seconds"] - origin
-        print(f"Dialogue: 0,{stamp(start)},{stamp(end)},Cue,,0,0,0,,"
+        print(f"Dialogue: 0,{stamp(at)},{stamp(at + hold)},Cue,,0,0,0,,"
               f"{text.replace(chr(10), r'\N')}")
 
 
