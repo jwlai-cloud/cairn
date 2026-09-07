@@ -9,6 +9,10 @@ from __future__ import annotations
 import os
 
 MODE = os.getenv("CAIRN_MODE", "fixture")
+
+# A path makes the audit ledger durable across restarts (AR-15). Unset keeps the
+# in-memory store, which is what the tests and the deterministic replay want.
+AUDIT_DB = os.getenv("CAIRN_AUDIT_DB") or None
 ACTOR_ID = os.getenv("CAIRN_ACTOR_ID", "user_shift_boss_01")
 ACTOR_ROLES = tuple(os.getenv("CAIRN_ACTOR_ROLES", "SHIFT_BOSS,MAINTENANCE_PLANNER").split(","))
 

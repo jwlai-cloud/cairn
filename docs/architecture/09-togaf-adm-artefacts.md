@@ -196,7 +196,7 @@ Observe → Correlate → Assess → Generate options → Review policy
 |---|---|---|---|
 | 0 (this cycle) | Vertical slice, synthetic, simulation-only | Architecture pack accepted | All suites pass; demo replays |
 | 1 | Real model in the loop (Bedrock), evaluation harness with LLM-as-judge | Increment 0 green | Evaluation scores stable across prompt versions |
-| 2 | Durable stores: audit ledger, action ledger, sessions | Increment 1 green | Replay works across process restarts |
+| 2 | ~~Durable audit ledger~~ **done**; action ledger and sessions remain | Increment 1 green | Replay works across process restarts |
 | 3 | One governed read-only adapter (weather is the lowest-risk first source) | Zone 1 review passed | No write path introduced; classification enforced |
 | 4 | Draft artefacts into a real CMMS sandbox behind the same gateway | Increment 3 green + data owner sign-off | Tier 3 only; Tier 4 remains prohibited |
 | — | Any Tier 4 capability | **Not on the roadmap** | Requires a separate certified control programme |
@@ -224,7 +224,7 @@ Observe → Correlate → Assess → Generate options → Review policy
 | Fail closed | `PR-02` | Met | Fail-closed, expiry and stale-evidence tests |
 | No raw chain-of-thought displayed | `08` | Met | `test_no_chain_of_thought_field_is_exposed` |
 | 2D fallback usable | `08 §8.8` | Met | Browser walkthrough captured in both renderers |
-| Durable stores | `02` | **Not met — deferred** | In-memory by design; increment 2 |
+| Durable audit store | `02`, `04 §4.8` | Met | `app/audit/store.py`; SQLite with append-only triggers, enabled by `CAIRN_AUDIT_DB` |
 | Enterprise identity | `04` | **Not met — deferred** | Roles are configuration, not federated identity |
 
 ### Open compliance risks
@@ -232,7 +232,7 @@ Observe → Correlate → Assess → Generate options → Review policy
 | ID | Risk | Impact | Treatment |
 |---|---|---|---|
 | CR-01 | Roles come from configuration, not an IdP | An operator could self-assign a role locally | Accepted for prototype; increment 1 binds to identity |
-| CR-02 | Audit ledger is in-process | Audit is lost on restart | Accepted for prototype; increment 2 |
+| CR-02 | ~~Audit ledger is in-process~~ | ~~Audit is lost on restart~~ | **Closed.** `CAIRN_AUDIT_DB` persists the ledger to SQLite with database-enforced append-only triggers. In-memory remains the default so replay stays hermetic. |
 | CR-03 | Option economics are fixture-derived | Numbers are illustrative, not modelled | Stated in README and in-app `SIMULATION ONLY` badge |
 | CR-04 | Determinism is provided by a fixture model | Real-model behaviour is unproven | Increment 1 runs the evaluation suite against Bedrock |
 
@@ -268,7 +268,7 @@ Observe → Correlate → Assess → Generate options → Review policy
 | AR-12 | Remain usable without WebGL | Non-functional (availability) | Should | Browser walkthrough, both renderers | Met |
 | AR-13 | Never display raw chain-of-thought | Constraint | Must | `test_no_chain_of_thought_field_is_exposed` | Met |
 | AR-14 | Scene legible within two seconds | Non-functional (usability) | Should | Labelled scene, five-tile KPI strip | Met, subjective |
-| AR-15 | Survive process restart with audit intact | Non-functional (durability) | Could | — | **Deferred to increment 2** |
+| AR-15 | Survive process restart with audit intact | Non-functional (durability) | Could | `test_the_audit_survives_a_restart` | Met |
 | AR-16 | Every specialist gathers evidence through a tool before answering | Non-functional (assurance) | Must | `test_every_specialist_actually_calls_at_least_one_tool` | Met |
 | AR-17 | A tool outside a node's allow-list is cancelled at call time | Non-functional (safety) | Must | `test_a_tool_outside_the_node_allow_list_is_cancelled` | Met |
 

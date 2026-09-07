@@ -44,7 +44,7 @@ STATUS_BY_CODE = {
 }
 
 app = FastAPI(title="CAIRN", version="0.1.0", description="Mine operations decision fabric (prototype)")
-store = RunStore(mode=settings.MODE)
+store = RunStore(mode=settings.MODE, audit_database=settings.AUDIT_DB)
 
 
 @app.exception_handler(ActionRejected)
@@ -234,9 +234,31 @@ def get_audit(correlation_id: str) -> dict:
     }
 
 
+@app.get("/v1/audit/{correlation_id}/history")
+def get_audit_history(correlation_id: str) -> dict:
+    """Every entry recorded for this correlation id, across runs and process restarts.
+
+    With CAIRN_AUDIT_DB set this outlives the process; without it, it is this session.
+    """
+    if correlation_id != CORRELATION_ID:
+        raise HTTPException(status_code=404, detail="Unknown correlation id")
+    entries = store.audit_history()
+    return {
+        "correlationId": correlation_id,
+        "durable": settings.AUDIT_DB is not None,
+        "entryCount": len(entries),
+        "entries": [e.model_dump(by_alias=True) for e in entries],
+    }
+
+
 @app.get("/healthz")
 def healthz() -> dict:
-    return {"status": "ok", "mode": settings.MODE, "credentialsRequired": settings.MODE != "fixture"}
+    return {
+        "status": "ok",
+        "mode": settings.MODE,
+        "credentialsRequired": settings.MODE != "fixture",
+        "durableAudit": settings.AUDIT_DB is not None,
+    }
 
 
 if WEB_DIR.exists():

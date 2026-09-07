@@ -32,7 +32,7 @@ Open <http://127.0.0.1:8000>.
 
 ```bash
 source .venv/bin/activate
-python -m pytest -q                # 72 tests
+python -m pytest -q                # 95 tests
 python -m pytest tests/safety -q   # safety cases only
 ```
 
@@ -75,7 +75,7 @@ Two extra controls worth showing: **use 2D fallback** (top-right of the scene, w
 | Provenance | Every agent output carries evidence IDs, assumptions, unknowns and confidence. | `app/domain/models.py` |
 | Uncertainty | Stale and conflicting sources are surfaced in the read model and the UI. Neither conflicting forecast is discarded. | `Run._flag_stale_and_conflicting` |
 | No chain-of-thought | The read model exposes status, findings, evidence and uncertainty only. A test asserts no reasoning-trace field exists. | `tests/contract/` |
-| Audit | Append-only, sequence-ordered, replayable without the conversational state. | `app/audit/ledger.py` |
+| Audit | Append-only, sequence-ordered, replayable without the conversational state. Set `CAIRN_AUDIT_DB` to persist it to SQLite, where append-only is enforced by database triggers rather than by convention. | `app/audit/ledger.py`, `app/audit/store.py` |
 
 ---
 
@@ -116,6 +116,13 @@ docs/architecture/ the architecture pack and ADRs
 | `fixture` (default) | `uvicorn app.api.main:app` | none | byte-identical replay |
 | `bedrock` | `CAIRN_MODE=bedrock uvicorn app.api.main:app` | AWS + Bedrock model access | not guaranteed |
 
+```bash
+CAIRN_AUDIT_DB=./cairn-audit.sqlite3 uvicorn app.api.main:app   # audit survives a restart
+```
+
+`GET /v1/audit/{correlationId}` returns the current run's chain; `GET /v1/audit/{correlationId}/history` returns
+every entry ever recorded for it, across runs and process restarts.
+
 Bedrock mode needs a **tool-capable** model, not a specific vendor — the agent boundary is a Pydantic contract,
 so anything that can call a tool will do. By default CAIRN asks the account what it has and takes the best of it,
 ranked newest-first, rather than pinning an id that goes stale the day a better model ships:
@@ -147,7 +154,7 @@ Switching to Bedrock changes one line in `app/agents/graph.py` and nothing else 
 - No direct control of trucks, crushers, PLCs, safety interlocks, permits, blasts or isolations.
 - State-changing actions require typed policy checks, scoped approval, idempotency and audit records, and write only to an in-process simulation store.
 - The model is not the authorization boundary.
-- Stores are in-memory: audit does not survive a restart. This is deliberate for replay and is scheduled for increment 2.
+- Stores are in-memory by default, which keeps replay hermetic. `CAIRN_AUDIT_DB=path.sqlite3` makes the audit ledger durable across restarts; the action and session stores are still in-process.
 - The economics on the option cards are illustrative fixtures, not a modelled mine plan.
 
 ## Licence
