@@ -110,9 +110,22 @@ class ActionGateway:
         actor_roles: list[str],
         evidence: list[Evidence] | None = None,
         now=None,
+        transport: Callable[[ActionRequest], tuple[str, dict]] | None = None,
     ) -> ActionRecord:
         now = now or utcnow()
         rhash = request_hash(request)
+
+        # 0. An outcome we could not confirm outranks everything else. If this key is
+        # already claimed as UNKNOWN, no amount of fresh policy or approval makes a
+        # retry safe, and answering APPROVAL_EXPIRED here would tell the operator to go
+        # and get a new approval for something that may already have happened.
+        claimed = self._by_idempotency_key.get(request.idempotency_key)
+        if claimed is not None and claimed.status is ActionStatus.UNKNOWN:
+            raise ActionRejected(
+                "RECONCILIATION_REQUIRED",
+                "The previous attempt timed out with an unknown outcome. Reconcile it before retrying.",
+                {"actionId": claimed.action_id, "idempotencyKey": claimed.idempotency_key},
+            )
 
         # 1. Policy first. A denial here is model-independent and terminal.
         decision = self.policy.evaluate(
@@ -179,14 +192,6 @@ class ActionGateway:
         # 3. Idempotency: claim the key before producing any effect.
         prior = self._by_idempotency_key.get(request.idempotency_key)
         if prior is not None:
-            # Unknown outcome first: an action that may already have applied cannot be
-            # retried at all, whatever payload the caller now presents.
-            if prior.status is ActionStatus.UNKNOWN:
-                raise ActionRejected(
-                    "RECONCILIATION_REQUIRED",
-                    "The previous attempt timed out with an unknown outcome. Reconcile it before retrying.",
-                    {"actionId": prior.action_id, "idempotencyKey": prior.idempotency_key},
-                )
             if prior.request_hash != rhash:
                 raise ActionRejected(
                     "IDEMPOTENCY_CONFLICT",
@@ -219,14 +224,18 @@ class ActionGateway:
         self._by_idempotency_key[request.idempotency_key] = claim
 
         try:
-            ref, artefact = self.transport(request)
-        except ExternalTimeout as exc:
-            # The call may or may not have applied. Fail into UNKNOWN and stop; never
-            # retry blindly, because a blind retry is how one instruction becomes two.
+            ref, artefact = (transport or self.transport)(request)
+        except Exception as exc:
+            # The call may or may not have applied, and the gateway cannot prove which.
+            # Every transport failure resolves the claim into UNKNOWN rather than
+            # escaping: an escaping exception would leave the key claimed as
+            # IN_PROGRESS forever with no way to reconcile it. Never retry blindly,
+            # because a blind retry is how one instruction becomes two.
+            detail = "timed out" if isinstance(exc, ExternalTimeout) else type(exc).__name__
             unknown = claim.model_copy(
                 update={
                     "status": ActionStatus.UNKNOWN,
-                    "message": f"Outcome unknown after timeout: {exc}. Reconciliation required.",
+                    "message": f"Outcome unknown after the call {detail}: {exc}. Reconciliation required.",
                 }
             )
             self._by_idempotency_key[request.idempotency_key] = unknown
@@ -234,7 +243,7 @@ class ActionGateway:
             self.ledger.record(
                 "ACTION_UNKNOWN",
                 request.actor_id,
-                f"{request.action_type.value} timed out after it may have applied; entering UNKNOWN.",
+                f"{request.action_type.value} failed after it may have applied ({detail}); entering UNKNOWN.",
                 actionId=unknown.action_id,
                 idempotencyKey=unknown.idempotency_key,
                 requiresReconciliation=True,
@@ -278,6 +287,21 @@ class ActionGateway:
                 "NOT_RECONCILABLE",
                 f"Action {action_id} is {record.status.value}; only UNKNOWN can be reconciled.",
             )
+
+        # Persist the intermediate state the contract declares, so a consumer watching
+        # the ledger sees reconciliation start rather than only its result.
+        reconciling = record.model_copy(
+            update={"status": ActionStatus.RECONCILING, "message": "Reconciliation in progress."}
+        )
+        self._by_idempotency_key[record.idempotency_key] = reconciling
+        self.records[self.records.index(record)] = reconciling
+        self.ledger.record(
+            "ACTION_RECONCILING",
+            actor_id,
+            f"Reconciling {record.action_type.value} against the external system.",
+            actionId=record.action_id,
+        )
+        record = reconciling
 
         if applied:
             ref, artefact = _artefact_ref_for(record)

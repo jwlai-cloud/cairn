@@ -473,7 +473,7 @@ class Run:
 
     # -------------------------------------------------------------------- actions
 
-    def execute_approved_actions(self, *, actor_id: str, actor_roles: list[str]) -> list:
+    def execute_approved_actions(self, *, actor_id: str, actor_roles: list[str], transport=None) -> list:
         if self.approval is None or self.selected_scenario_id is None:
             raise ActionRejected("APPROVAL_REQUIRED", "Nothing has been approved.")
         option = self.scenario(self.selected_scenario_id)
@@ -502,7 +502,11 @@ class Run:
             )
             records.append(
                 self.gateway.execute(
-                    request, approval=self.approval, actor_roles=actor_roles, evidence=self.evidence
+                    request,
+                    approval=self.approval,
+                    actor_roles=actor_roles,
+                    evidence=self.evidence,
+                    transport=transport,
                 )
             )
 
@@ -537,17 +541,17 @@ class Run:
 
         Exercises the case from docs/architecture/06 6.4 #9: the call may already have
         applied, so the action must land in UNKNOWN rather than be retried blindly.
+
+        The override is passed per call rather than swapped onto the shared gateway, so
+        a concurrent action on the same run cannot be dragged through it.
         """
 
         def timing_out(_request):
             raise ExternalTimeout("no response from the simulated work-order system after 30s")
 
-        original = self.gateway.transport
-        self.gateway.transport = timing_out
-        try:
-            return self.execute_approved_actions(actor_id=actor_id, actor_roles=actor_roles)
-        finally:
-            self.gateway.transport = original
+        return self.execute_approved_actions(
+            actor_id=actor_id, actor_roles=actor_roles, transport=timing_out
+        )
 
     def reconcile_action(self, action_id: str, *, applied: bool, actor_id: str):
         return self.gateway.reconcile(action_id, applied=applied, actor_id=actor_id)
