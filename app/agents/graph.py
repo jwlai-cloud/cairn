@@ -184,6 +184,7 @@ class GraphRunResult:
     timings: dict[str, int] = field(default_factory=dict)
     statuses: dict[str, NodeStatus] = field(default_factory=dict)
     telemetry: dict[str, NodeTelemetry] = field(default_factory=dict)
+    usage: dict[str, int] = field(default_factory=dict)
     model_id: str = MODEL_ID_FIXTURE
     prompt_version: str = PROMPT_VERSION
 
@@ -217,7 +218,15 @@ async def run_graph(prompt: str, ctx: GraphContext, mode: str = "fixture") -> Gr
     outputs: dict[str, BaseModel] = {}
     statuses: dict[str, NodeStatus] = {}
     timings: dict[str, int] = {}
+    usage: dict[str, int] = {"inputTokens": 0, "outputTokens": 0, "totalTokens": 0}
     for node_id, node_result in result.results.items():
+        # Token accounting is only meaningful against a real provider; the fixture model
+        # reports zeros. Read defensively - this is telemetry, never load-bearing.
+        metrics = getattr(getattr(node_result, "result", None), "metrics", None)
+        accumulated = getattr(metrics, "accumulated_usage", None) or {}
+        for key in usage:
+            usage[key] += int(accumulated.get(key, 0) or 0)
+
         structured = getattr(node_result.result, "structured_output", None)
         if structured is None:
             statuses[node_id] = NodeStatus.FAILED
@@ -236,5 +245,6 @@ async def run_graph(prompt: str, ctx: GraphContext, mode: str = "fixture") -> Gr
         timings=timings,
         statuses=statuses,
         telemetry=telemetry,
+        usage=usage,
         model_id=resolve_model_id_for(mode),
     )

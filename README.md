@@ -124,8 +124,12 @@ CAIRN_AUDIT_DB=./cairn-audit.sqlite3 uvicorn app.api.main:app   # audit survives
 every entry ever recorded for it, across runs and process restarts.
 
 Bedrock mode needs a **tool-capable** model, not a specific vendor — the agent boundary is a Pydantic contract,
-so anything that can call a tool will do. By default CAIRN asks the account what it has and takes the best of it,
-ranked newest-first, rather than pinning an id that goes stale the day a better model ships:
+so anything that can call a tool will do. [ADR-004](docs/architecture/decisions/ADR-004-bedrock-model-selection.md)
+records the three enabled models and why: **Claude Sonnet 5** as primary, **GPT-5.6 Luna** to prove a second vendor
+satisfies the same contracts, and **Nova Lite** as the cheapest smoke test.
+
+By default CAIRN asks the account what it has and takes the best of it, ranked newest-first, rather than pinning an
+id that goes stale the day a better model ships:
 
 ```bash
 CAIRN_MODE=bedrock uvicorn app.api.main:app                       # discover the best available
@@ -136,6 +140,16 @@ CAIRN_MODE=bedrock CAIRN_BEDROCK_MODEL_ID=us.amazon.nova-lite-v1:0 \
 Discovery needs `bedrock:ListFoundationModels` and `bedrock:ListInferenceProfiles`. Without them it logs a
 warning and falls back, so a locked-down account fails with a clear `AccessDenied` at invoke time rather than
 a confusing empty result at startup.
+
+To check a real model actually satisfies the typed contracts:
+
+```bash
+python -m app.agents.smoke --model us.amazon.nova-lite-v1:0
+```
+
+It runs one real graph invocation and reports, per node, whether the declared Pydantic model validated — plus
+token usage and an estimated cost. Non-zero exit if any node failed its contract. Strands calls `ConverseStream`,
+so the IAM action required is `bedrock:InvokeModelWithResponseStream`.
 
 One full graph run is roughly 15k input and 3.6k output tokens across 11 model calls, so the choice of model is
 a cost decision rather than a capability one.

@@ -20,20 +20,34 @@ logger = logging.getLogger(__name__)
 
 # Newest and most capable first. Substring match against the model or profile id, so a
 # new dated revision of the same family is picked up without a code change.
+#
+# Two id conventions coexist on Bedrock. The 5.x Anthropic and OpenAI models use a bare
+# family id ("anthropic.claude-sonnet-5"); older ones carry a date and version suffix
+# ("anthropic.claude-haiku-4-5-20251001-v1:0"). Substring matching handles both.
 PREFERENCE: tuple[str, ...] = (
     "claude-opus-5",
     "claude-sonnet-5",
     "claude-haiku-5",
+    "claude-opus-4-8",
+    "claude-opus-4-7",
+    "claude-opus-4-6",
+    "claude-sonnet-4-6",
     "claude-opus-4-5",
     "claude-sonnet-4-5",
     "claude-haiku-4-5",
+    "gpt-5.6-sol",
+    "gpt-5.6-luna",
+    "nova-2-pro",
+    "nova-2-lite",
+    "nova-premier",
     "nova-pro",
     "nova-lite",
     "gpt-oss",
+    "llama4",
     "llama3-3",
 )
 
-FALLBACK_MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+FALLBACK_MODEL_ID = "us.anthropic.claude-sonnet-5"
 
 
 def _candidates(region: str | None) -> list[str]:
