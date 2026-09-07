@@ -50,7 +50,9 @@ done
 ffmpeg -v error -y -f concat -safe 0 -i "$WORK/list.txt" -c copy "$OUT"
 
 total=$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$OUT")
+secs=${total%.*}
 printf '\n%s\n' "$OUT"
-printf 'runtime: %d:%02d  (5:00 cap)\n' "$(echo "$total / 60" | bc)" "$(echo "$total % 60" | bc)"
+printf 'runtime: %d:%02d  (5:00 cap, %ds of headroom)\n' \
+  "$((secs / 60))" "$((secs % 60))" "$((300 - secs))"
 ffprobe -v error -select_streams v:0 -show_entries stream=width,height,r_frame_rate -of default=nw=1 "$OUT"
 ls -lh "$OUT" | awk '{print "size:", $5}'
