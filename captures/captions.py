@@ -5,10 +5,11 @@ The video carries no narration track, so the captions are the argument. Each one
 states what the beat *proves*, not what is on screen - a judge watching muted, or at
 360p on a phone, has to be able to follow the claim without the voiceover.
 
-Timings come from captures/beats.json, which capture.mjs measures against the video
-clock. Nothing here is hand-timed: a beat's requested hold and where it actually lands
-in the recording differ by seconds, and captions cut to the requested holds land on the
-wrong shot. Captions key off the beat label instead, so a re-record re-times them.
+Timings come from captures/beats.json, the wall clock times capture.mjs measured. They
+are also the output times, because edit.sh restores real time before burning these in:
+the raw recording plays about eleven per cent slow, and captions cut to the raw timeline
+miss their own shots by up to twelve seconds. Captions key off the beat label rather
+than a time, so a re-record re-times them with no edit here.
 
 ASS rather than SRT, purely so the header can declare the frame it was written for.
 libass assumes 288 lines for a plain subtitle file, so a size chosen for a 2400-line
@@ -90,10 +91,10 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Cue,Helvetica Neue,64,&H00F6EDE6,&H00F6EDE6,&H14140B08,&H14140B08,0,0,0,0,100,100,0,0,3,22,0,2,240,240,110,1
+Style: Cue,Helvetica Neue,64,&H00F6EDE6,&H00F6EDE6,&H14140B08,&H14140B08,0,0,0,0,100,100,0,0,3,22,0,2,240,240,24,1
 
 [Events]
-Format: Layer, Start, End, Style, Name, MarginL, MarginR, Effect, Text"""
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text"""
 
 
 def stamp(seconds: float) -> str:
