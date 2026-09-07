@@ -145,3 +145,63 @@ def test_audit_history_survives_a_reset_without_leaking_across_sessions():
 
         bob.post("/v1/events")
         assert bob.get("/v1/audit/corr_compound_disruption_v1/history").json()["entryCount"] == before
+
+
+def test_api_responses_are_not_cached_and_the_cookie_tracks_the_scheme():
+    """Session-scoped data must not sit in a browser cache, or survive as cleartext.
+
+    Both are only reachable once this is hosted: a cached /v1 response can be replayed
+    into a different session on a shared machine, and a cookie without Secure travels in
+    clear. Secure follows the request scheme rather than being pinned on, so the local
+    http runs - the capture and the CI golden path - keep working.
+    """
+    from fastapi.testclient import TestClient
+
+    from app.api.main import SESSION_COOKIE, app, store
+
+    store.clear()
+    with TestClient(app, base_url="http://testserver") as plain:
+        r = plain.post("/v1/events")
+        assert r.headers["cache-control"] == "no-store"
+        assert "secure" not in r.headers["set-cookie"].lower()
+
+    store.clear()
+    with TestClient(app, base_url="https://testserver") as tls:
+        r = tls.post("/v1/events")
+        assert "Secure" in r.headers["set-cookie"]
+        assert tls.cookies.get(SESSION_COOKIE)
+
+
+def test_concurrent_first_requests_for_one_session_share_a_run():
+    """Two requests arriving together on one cookie must not build two runs.
+
+    Without a lock both miss the lookup, both construct a RunStore, and the second
+    assignment discards the first - so a decision written into the discarded run
+    disappears on the next call.
+
+    The window is a few bytecodes wide, so simply hammering the store from threads does
+    not reach it under the GIL - that version of this test passed against the unlocked
+    code and proved nothing. Constructing a run is made slow instead, which widens the
+    window to something a scheduler will always interleave.
+    """
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    from app.domain import run_service
+
+    real_init = run_service.RunStore.__init__
+
+    def slow_init(self, *args, **kwargs):
+        time.sleep(0.05)
+        real_init(self, *args, **kwargs)
+
+    shared = run_service.SessionRunStore()
+    run_service.RunStore.__init__ = slow_init
+    try:
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            stores = list(pool.map(lambda _: shared.store_for("one-visitor"), range(8)))
+    finally:
+        run_service.RunStore.__init__ = real_init
+
+    assert len({id(s) for s in stores}) == 1, "every caller must get the same store"
+    assert shared.session_count == 1

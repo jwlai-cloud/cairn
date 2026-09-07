@@ -61,15 +61,35 @@ def session_id(request: Request, response: Response) -> str:
     sid = request.cookies.get(SESSION_COOKIE)
     if not sid or not _SESSION_RE.match(sid):
         sid = secrets.token_urlsafe(18)
-    # Refreshed on every call so a long demo cannot expire mid-walkthrough.
+    # Refreshed on every call so a long demo cannot expire mid-walkthrough. Secure is
+    # taken from the scheme rather than hardcoded: the deployed service is HTTPS and the
+    # cookie must not travel in clear, but pinning it on would silently break every
+    # http://127.0.0.1 run, including the capture and the CI golden path. Uvicorn is
+    # started with --proxy-headers, so behind a TLS-terminating proxy the scheme here is
+    # the one the browser actually used.
     response.set_cookie(
-        SESSION_COOKIE, sid, max_age=SESSION_MAX_AGE, httponly=True, samesite="lax", path="/"
+        SESSION_COOKIE, sid, max_age=SESSION_MAX_AGE, httponly=True, samesite="lax",
+        path="/", secure=request.url.scheme == "https",
     )
     return sid
 
 
 def current_run(sid: str = Depends(session_id)) -> Run:
     return store.run_for(sid)
+
+
+@app.middleware("http")
+async def _no_store(request: Request, call_next):
+    """Keep cookie-scoped data out of the browser cache.
+
+    Every /v1 response is scoped to the caller's session, so a cached copy could be
+    replayed into a different one - two judges on one machine, or the same person after
+    a reset. `private` alone would not prevent that; only `no-store` does.
+    """
+    response = await call_next(request)
+    if request.url.path.startswith("/v1/"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.exception_handler(ActionRejected)

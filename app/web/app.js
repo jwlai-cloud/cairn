@@ -405,11 +405,23 @@ async function reconcile() {
   // more than one call in doubt, and a half-reconciled plan is still an open question.
   const unknown = view.actions.filter((a) => a.status === 'UNKNOWN');
   if (!unknown.length) return;
-  let ok = null;
+
+  // One failure must not abandon the rest. Stopping at the first rejection left the
+  // later actions UNKNOWN with nothing on screen saying so - which is the exact failure
+  // this control exists to prevent, reintroduced one level up.
+  const failed = [];
   for (const action of unknown) {
-    ok = await refresh(call(`/v1/actions/${action.actionId}/reconcile`,
+    const ok = await refresh(call(`/v1/actions/${action.actionId}/reconcile`,
       { method: 'POST', body: { applied: true } }));
-    if (!ok) return;
+    if (!ok) failed.push(action.actionId);
+  }
+
+  if (failed.length) {
+    toast('RECONCILIATION INCOMPLETE',
+      `${failed.length} of ${unknown.length} action(s) are still UNKNOWN and must be `
+      + 'confirmed against the dispatch system before this plan can be closed.',
+      { unresolved: failed.join(', ') }, 'deny');
+    return;
   }
   toast('RECONCILED', `${unknown.length} action(s) confirmed applied by the dispatch system. `
     + 'UNKNOWN → RECONCILING → SUCCEEDED.',

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -798,17 +799,23 @@ class SessionRunStore:
         # so sessions cannot read or disturb each other's entries.
         self.audit_store = build_store(audit_database)
         self._stores: OrderedDict[str, RunStore] = OrderedDict()
+        # Read-modify-write over the session map. Two concurrent requests carrying the
+        # same cookie can both miss the lookup, both build a RunStore, and the second
+        # assignment then discards the first - so whichever request wrote a decision
+        # into the discarded run has it silently disappear on the next call.
+        self._lock = threading.Lock()
 
     def store_for(self, session_id: str) -> RunStore:
-        store = self._stores.get(session_id)
-        if store is None:
-            store = RunStore(mode=self.mode, audit_store=self.audit_store)
-            self._stores[session_id] = store
-            while len(self._stores) > self.max_sessions:
-                self._stores.popitem(last=False)
-        else:
-            self._stores.move_to_end(session_id)
-        return store
+        with self._lock:
+            store = self._stores.get(session_id)
+            if store is None:
+                store = RunStore(mode=self.mode, audit_store=self.audit_store)
+                self._stores[session_id] = store
+                while len(self._stores) > self.max_sessions:
+                    self._stores.popitem(last=False)
+            else:
+                self._stores.move_to_end(session_id)
+            return store
 
     def run_for(self, session_id: str) -> Run:
         return self.store_for(session_id).run
@@ -822,8 +829,10 @@ class SessionRunStore:
 
     def clear(self) -> None:
         """Drop every session. Used by tests to start from a known state."""
-        self._stores.clear()
+        with self._lock:
+            self._stores.clear()
 
     @property
     def session_count(self) -> int:
-        return len(self._stores)
+        with self._lock:
+            return len(self._stores)
