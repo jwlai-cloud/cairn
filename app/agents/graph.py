@@ -57,8 +57,25 @@ def resolve_model_id_for(mode: str) -> str:
     return resolve_model_id(settings.BEDROCK_REGION, settings.BEDROCK_MODEL_ID)
 
 MAX_NODE_EXECUTIONS = 12
+
+# The graph stays bounded in both modes, but the bounds are not the same size. A fixture
+# node answers in milliseconds; a real model on Bedrock takes tens of seconds, and the
+# risk specialist gathers the most evidence of the four. Sizing every mode to the fixture
+# budget timed the risk node out at 30s against Nova Lite, which reads as a broken graph
+# rather than a budget set for the wrong workload.
+#
+# These are still ceilings, not expectations. Exceeding one is a failure, not a retry.
 EXECUTION_TIMEOUT_SECONDS = 90
 NODE_TIMEOUT_SECONDS = 30
+BEDROCK_EXECUTION_TIMEOUT_SECONDS = 420
+BEDROCK_NODE_TIMEOUT_SECONDS = 150
+
+
+def bounds_for(mode: str) -> tuple[int, int]:
+    """Execution and per-node ceilings for the mode, in seconds."""
+    if mode == "bedrock":
+        return BEDROCK_EXECUTION_TIMEOUT_SECONDS, BEDROCK_NODE_TIMEOUT_SECONDS
+    return EXECUTION_TIMEOUT_SECONDS, NODE_TIMEOUT_SECONDS
 
 
 @dataclass(frozen=True)
@@ -207,9 +224,10 @@ def build_graph(ctx: GraphContext, mode: str = "fixture", model_id: str | None =
     for spec in SPECIALISTS:
         builder.set_entry_point(spec.node_id)            # four specialists run in parallel
         builder.add_edge(spec.node_id, PLANNER.node_id)  # planner waits for all four
+    execution_timeout, node_timeout = bounds_for(mode)
     builder.set_max_node_executions(MAX_NODE_EXECUTIONS)
-    builder.set_execution_timeout(EXECUTION_TIMEOUT_SECONDS)
-    builder.set_node_timeout(NODE_TIMEOUT_SECONDS)
+    builder.set_execution_timeout(execution_timeout)
+    builder.set_node_timeout(node_timeout)
     return builder.build(), telemetry, model_id
 
 
