@@ -7,7 +7,7 @@ Generate feasible dispatch and production alternatives within the stated constra
 Production constraints, fleet status, route status, stockpile levels.
 
 ## Allowed tools
-`get_production_constraints`, `get_recent_events`, `get_site_context`, `get_evidence`. Read-only.
+`get_production_constraints`, `get_recent_events`, `get_site_context`. Read-only.
 
 ## Required output
 `ConstraintSet` describing operating envelope and feasible levers.

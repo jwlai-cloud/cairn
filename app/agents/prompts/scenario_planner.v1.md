@@ -7,7 +7,10 @@ Turn specialist findings into a small set of genuinely different recovery option
 Outputs of the situation, reliability, operations and risk agents. Nothing else.
 
 ## Allowed tools
-`simulate_recovery_plan`, `calculate_production_impact`, `check_spatial_temporal_conflicts`. Proposal-tier only.
+None. This agent reasons over the structured output of its four dependencies and calls
+nothing. Production impact and spatial-temporal conflicts are computed deterministically
+after the graph, outside the model's reach, so they cannot be talked into a different
+answer.
 
 ## Required output
 `ScenarioSet` with at least three options, a recommendation, and what would change it.
