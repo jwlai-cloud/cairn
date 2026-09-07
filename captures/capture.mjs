@@ -123,10 +123,14 @@ await cue(page, 'pre', 'Strands graph fills, four specialists in parallel',
 // live room rather than as a separate slide: the spine stays visible around it.
 await cue(page, 'pre', 'Typed findings cross the edges: the fan-in, over the live room',
   async () => {
+    // Proportions of the beat, not fixed milliseconds. The old 6.5s and 10.5s summed to
+    // exactly the hold this cue had at the time, so recalibrating the holds shorter would
+    // have pushed the reveal past the end of its own beat.
+    const hold = APP_HOLDS[cueIndex - 1] * 1000;
     await hl(page, '.spine');
-    await wait(page, 6500);
+    await wait(page, hold * 0.28);
     await page.evaluate(() => window.capTopology(true));
-    await wait(page, 10500);
+    await wait(page, hold * 0.62);
     await page.evaluate(() => window.capTopology(false));
   });
 await clear(page);
