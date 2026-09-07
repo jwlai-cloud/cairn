@@ -17,19 +17,28 @@ not enabled denies on the *model*; an identity with no policy denies on the *act
 
 ## Two things to do, in an account with admin
 
-**1. Extend the user's existing inline policy** with `bedrock-access.json` from this
-directory. It is a superset: the Titan embedding model the other project on this user
-already had is kept exactly, and `amazon.nova-*` covers the Nova Micro entry it replaces.
-
-Adding a second inline policy was rejected. All inline policies on one principal share a
-2048 non-whitespace character budget, and although the visible policy is only 247
-characters, others exist. Replacing the one policy sidesteps the budget question.
-
-For App Runner, put the same document in a customer-managed policy and attach it to the
-instance role instead:
+**1. Attach `bedrock-access.json` as a customer-managed policy.** Not inline.
 
     aws iam create-policy --policy-name cairn-bedrock-invoke \
       --policy-document file://docs/deploy/bedrock-access.json
+
+    aws iam attach-user-policy --user-name mimir-bedrock \
+      --policy-arn arn:aws:iam::034355008385:policy/cairn-bedrock-invoke
+
+In the console this is IAM, Policies, Create policy - not the Add permissions screen on
+the user, which only writes inline policies.
+
+Inline does not fit. Every inline policy on a principal shares one 2048 non-whitespace
+character budget, and this user already carries many. A managed policy has its own 6144
+character budget and consumes none of that pool.
+
+It is also the safer edit. Permissions are additive across inline and managed policies,
+so this grants what CAIRN needs without modifying anything another project depends on.
+The pre-existing inline grant for the Titan embedding model and Nova Micro is left alone,
+which is why neither appears in this document.
+
+And the App Runner instance role needs exactly this grant. One managed policy attaches to
+both the user and the role; two inline copies would drift.
 
 The document grants both actions, because Strands calls `ConverseStream` and a policy
 with only `InvokeModel` fails at the first token with an error that looks nothing like a
