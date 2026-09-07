@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="pit">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,28 +7,41 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<header class="topbar">
-  <div class="brand">CAIRN</div>
+<header class="bar">
+  <div class="mark"><b>CAIRN</b><span>MINE OPERATIONS DECISION FABRIC</span></div>
   <div class="crumbs">
-    <span id="shift">SHIFT —</span><span class="sep">|</span>
-    <span id="site">SITE —</span><span class="sep">|</span>
-    <span id="incidentStatus" class="status-chip">NORMAL SHIFT</span>
+    <span>SHIFT <b id="shift">—</b></span>
+    <span>SITE <b id="site">—</b></span>
   </div>
-  <div class="badges">
-    <span class="badge badge-sim" title="No mine system, PLC, SCADA, dispatch, ERP or CMMS is connected.">SIMULATION ONLY</span>
-    <span class="badge" id="modeBadge">mode —</span>
-    <span class="badge" id="policyBadge">policy —</span>
-    <span class="badge" id="renderBadge">render —</span>
+  <div id="incidentStatus" class="state">NORMAL SHIFT</div>
+  <div class="right">
+    <span class="plate hazard" title="No mine system, PLC, SCADA, dispatch, ERP or CMMS is connected.">SIMULATION ONLY</span>
+    <span class="plate" id="modeBadge">mode —</span>
+    <span class="plate" id="policyBadge">policy —</span>
+    <span class="plate" id="renderBadge">render —</span>
+    <button id="btnTheme" class="plate ghost" type="button" title="Switch palette">PALETTE</button>
   </div>
 </header>
 
 <div class="kpis" id="kpiStrip"></div>
 
 <main class="grid">
+  <!-- The decision loop, drawn as pit bench levels. Every figure here is measured. -->
+  <aside class="spine">
+    <h3>DECISION<br>LOOP</h3>
+    <div class="bench" id="spine"></div>
+  </aside>
+
   <section class="scene-wrap">
     <div id="sceneHost" class="scene-host">
       <canvas id="scene3d"></canvas>
       <canvas id="scene2d" hidden></canvas>
+      <div class="scan" aria-hidden="true"></div>
+      <div class="corner tl"></div><div class="corner tr"></div>
+      <div class="corner bl"></div><div class="corner br"></div>
+      <div class="sceneMeta">SURVEY PLAN <b>NP-14-A</b><br>DATUM <b>AHD</b> · GRID <b>MGA50</b><br>SOURCE <b>SYNTHETIC FIXTURE</b></div>
+      <div class="northArrow"><div>▲</div>N</div>
+      <div id="assetPop" class="asset-pop" hidden></div>
     </div>
     <div class="scene-legend">
       <span><i class="dot dot-normal"></i>normal</span>
@@ -38,48 +51,45 @@
       <span><i class="dot dot-closed"></i>route closed</span>
       <button id="toggleRender" class="link-btn" type="button">use 2D fallback</button>
     </div>
-    <div id="assetPop" class="asset-pop" hidden></div>
   </section>
 
-  <aside class="panels">
-    <div class="panel" id="incidentPanel">
-      <h2>Incident brief</h2>
+  <aside class="dossier">
+    <div class="sec">
+      <h2>INCIDENT</h2>
       <div id="incidentBody" class="muted">No incident. Inject events to begin.</div>
     </div>
-
-    <div class="panel">
-      <h2>Agent activity</h2>
+    <div class="sec">
+      <h2>AGENTS</h2>
       <div id="agentList" class="agents"></div>
       <p class="fineprint">Status, findings, evidence and uncertainty only. Reasoning traces are not exposed.</p>
     </div>
-
-    <div class="panel">
-      <h2>Evidence <span id="evidenceCount" class="pill">0</span></h2>
+    <div class="sec">
+      <h2>EVIDENCE <span id="evidenceCount" class="pill">0</span></h2>
       <div id="evidenceList" class="evidence"></div>
     </div>
   </aside>
 </main>
 
 <section class="rail">
-  <div class="rail-head">
-    <h2>Recovery options</h2>
-    <span id="recommendNote" class="muted"></span>
+  <div class="railhead">
+    <h2>RECOVERY OPTIONS</h2>
+    <p id="recommendNote" class="muted"></p>
   </div>
   <div id="scenarioCards" class="cards">
     <div class="empty">Run the analysis to generate recovery options.</div>
   </div>
 </section>
 
-<footer class="footer">
+<footer class="ctl">
   <div class="timeline" id="timeline"></div>
-  <div class="controls">
-    <button id="btnInject" type="button">Inject next event</button>
+  <div class="btns">
+    <button id="btnInject" type="button">Inject event</button>
     <button id="btnInjectAll" type="button">Inject all</button>
     <button id="btnAnalyse" type="button" class="primary">Run analysis</button>
-    <button id="btnApprove" type="button" class="approve" disabled>Approve plan</button>
+    <button id="btnApprove" type="button" class="approve" disabled>Select a plan first</button>
     <button id="btnProhibited" type="button" class="danger">Attempt interlock override</button>
     <button id="btnAudit" type="button">Audit trace</button>
-    <button id="btnReset" type="button">Reset / replay</button>
+    <button id="btnReset" type="button">Reset</button>
   </div>
 </footer>
 
@@ -87,7 +97,7 @@
 
 <div id="auditDrawer" class="drawer" hidden>
   <div class="drawer-head">
-    <h2>Audit trace</h2>
+    <h2>AUDIT TRACE</h2>
     <div class="drawer-meta" id="auditMeta"></div>
     <button id="btnCloseAudit" type="button" class="link-btn">close</button>
   </div>

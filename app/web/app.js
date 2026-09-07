@@ -111,16 +111,17 @@ function showAssetPop(asset, at) {
 function render() {
   if (!view) return;
   $('shift').textContent = view.site.shiftLabel;
-  $('site').textContent = `SITE: ${view.site.name}`;
+  $('site').textContent = view.site.name;
   $('modeBadge').textContent = `mode ${view.mode} · ${view.modelId}`;
   $('policyBadge').textContent = view.policyVersion;
 
   const chip = $('incidentStatus');
-  if (view.outcome) { chip.textContent = 'PLAN EXECUTED (SIMULATED)'; chip.className = 'status-chip done'; }
-  else if (view.incident) { chip.textContent = `INCIDENT: ${view.incident.status}`; chip.className = 'status-chip alert'; }
-  else if (view.events.length) { chip.textContent = 'SIGNALS ARRIVING'; chip.className = 'status-chip recovering'; }
-  else { chip.textContent = 'NORMAL SHIFT'; chip.className = 'status-chip'; }
+  if (view.outcome) { chip.textContent = 'PLAN EXECUTED (SIMULATED)'; chip.className = 'state done'; }
+  else if (view.incident) { chip.textContent = `INCIDENT: ${view.incident.status}`; chip.className = 'state alert'; }
+  else if (view.events.length) { chip.textContent = 'SIGNALS ARRIVING'; chip.className = 'state recovering'; }
+  else { chip.textContent = 'NORMAL SHIFT'; chip.className = 'state'; }
 
+  renderSpine();
   renderKpis();
   renderIncident();
   renderAgents();
@@ -131,6 +132,34 @@ function render() {
 
   scene.build(view.site);
   scene.update(view.site, sceneOptions());
+}
+
+/**
+ * The decision loop as bench levels. Every figure shown is measured by the Strands hook
+ * chain - there is no invented survey number here, because a system that claims not to
+ * invent numbers should not decorate itself with any.
+ */
+const SPINE_STEPS = [
+  ['situation', 'Observe'], ['reliability', 'Reliability'], ['operations', 'Operations'],
+  ['risk', 'Risk'], ['scenario_planner', 'Options'], ['policy_reviewer', 'Policy'],
+  ['action_coordinator', 'Act'], ['outcome_verifier', 'Verify'],
+];
+
+function renderSpine() {
+  const byId = new Map(view.nodes.map((n) => [n.nodeId, n]));
+  $('spine').innerHTML = SPINE_STEPS.map(([id, label]) => {
+    const node = byId.get(id);
+    if (!node) return '';
+    const state = node.status.toLowerCase();
+    const detail = node.status === 'COMPLETED' && node.durationMs != null
+      ? `${node.durationMs} ms`
+      : (node.status === 'COMPLETED' ? 'done' : '');
+    const kind = node.kind === 'deterministic-service'
+      ? '<u class="det">no model</u>' : '';
+    return `<div class="lvl ${state}" title="${node.role}">
+      <b>${label}</b>${detail ? `<u>${detail}</u>` : ''}${kind}
+    </div>`;
+  }).join('');
 }
 
 function renderKpis() {
@@ -232,17 +261,26 @@ function renderScenarios() {
     const sel = s.scenarioId === view.selectedScenarioId;
     const rec = s.scenarioId === view.recommendedScenarioId;
     const pct = Math.round(s.impacts.estimatedThroughputDelta * 100);
+    // Core sample: the option's risk composition as a strata bar, worst risk at depth.
+    const core = {
+      LOW: 'linear-gradient(180deg,var(--malachite) 0 74%,var(--hivis) 74% 100%)',
+      MEDIUM: 'linear-gradient(180deg,var(--malachite) 0 42%,var(--hivis) 42% 84%,var(--haematite) 84% 100%)',
+      HIGH: 'linear-gradient(180deg,var(--hivis) 0 34%,var(--haematite) 34% 100%)',
+      CRITICAL: 'var(--haematite)',
+    }[s.safetyRiskLevel] ?? 'var(--rule)';
     return `
     <div class="card ${sel ? 'selected' : ''}" data-scenario="${s.scenarioId}">
+      <div class="core" style="background:${core}"></div>
+      <div>
       <div class="card-head">
         <span class="card-title">${s.title}</span>
         ${rec ? '<span class="rec-flag">RECOMMENDED</span>' : ''}
       </div>
       <div class="card-sum">${s.summary}</div>
       <div class="card-metrics">
-        <div class="metric"><div class="metric-l">tonnes</div><div class="metric-v">+${s.impacts.estimatedTonnesDelta.toLocaleString()}</div></div>
-        <div class="metric"><div class="metric-l">recovery</div><div class="metric-v">${s.impacts.estimatedRecoveryMinutes}m</div></div>
-        <div class="metric"><div class="metric-l">throughput</div><div class="metric-v">${pct}%</div></div>
+        <div class="met"><u>TONNES</u><b class="${s.scenarioId === view.recommendedScenarioId ? 'good' : ''}">+${s.impacts.estimatedTonnesDelta.toLocaleString()}</b></div>
+        <div class="met"><u>RECOVERY</u><b>${s.impacts.estimatedRecoveryMinutes}<span style="font-size:11px">m</span></b></div>
+        <div class="met"><u>CRUSHER FEED</u><b class="${pct <= -20 ? 'bad' : ''}">${pct}%</b></div>
       </div>
       <div class="card-foot">
         <span class="tag ${SEV_CLASS[s.safetyRiskLevel]}">safety ${s.safetyRiskLevel}</span>
@@ -259,6 +297,7 @@ function renderScenarios() {
           <li><b>Actions requested:</b> ${s.requestedActionTypes.join(', ')}</li>
         </ul>
       </details>
+      </div>
     </div>`;
   }).join('');
 
@@ -386,6 +425,15 @@ $('btnReset').onclick = async () => {
   await refresh(call('/v1/runs/current/reset', { method: 'POST' }));
 };
 $('toggleRender').onclick = switchRenderer;
+$('btnTheme').onclick = () => {
+  const next = document.documentElement.dataset.theme === 'sheet' ? 'pit' : 'sheet';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('cairn-theme', next); } catch { /* private window */ }
+};
+try {
+  const saved = localStorage.getItem('cairn-theme');
+  if (saved) document.documentElement.dataset.theme = saved;
+} catch { /* private window */ }
 
 bootScene();
 view = await call('/v1/runs/current');
