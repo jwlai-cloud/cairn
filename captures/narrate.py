@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Build a narration track from the cue sheet, placed on the video's own timeline.
 
-Reads the table in captures/narration.md, speaks each line, and lays it at that cue's
-timecode rather than concatenating - so a line that runs long overruns its own beat
-instead of pushing every later line out of sync with the picture. Overruns are reported
-rather than silently trimmed, because the fix is to cut the sentence, not to talk faster.
+Takes the words from the table in captures/narration.md and the timings from
+captures/beats.json, which capture.mjs measured against the recording. The sheet's own
+cue column is for the person holding it, not for this: hand-written times drift from the
+take, which is exactly how the captions once landed twelve seconds off their own shots.
+Each line is laid at its beat rather than concatenated, so a line that runs long overruns
+only its own beat instead of pushing every later line out of sync with the picture.
+Overruns are reported rather than silently trimmed, because the fix is to cut the
+sentence, not to talk faster.
 
 macOS `say` is the floor, not the plan: a synthesised track reads as a project that ran
 out of time. Record a human take over the same cue sheet when there is any chance to.
@@ -12,6 +16,7 @@ out of time. Record a human take over the same cue sheet when there is any chanc
     python3 captures/narrate.py [out.wav] [--voice 'Lee (Premium)'] [--rate 160]
 """
 import argparse
+import json
 import pathlib
 import re
 import subprocess
@@ -45,11 +50,23 @@ def main() -> None:
     ap.add_argument("--voice", default="Lee (Premium)")
     ap.add_argument("--rate", type=int, default=160)
     ap.add_argument("--script", default=str(HERE / "narration.md"))
+    ap.add_argument("--beats", default=str(HERE / "beats.json"))
     args = ap.parse_args()
 
-    lines = cues(pathlib.Path(args.script))
-    if not lines:
+    sheet = cues(pathlib.Path(args.script))
+    if not sheet:
         sys.exit(f"no cues parsed from {args.script}")
+
+    beats = json.loads(pathlib.Path(args.beats).read_text())
+    if len(beats) != len(sheet):
+        sys.exit(f"{len(sheet)} lines in the cue sheet but {len(beats)} beats in the take; "
+                 "they are written one to one, so re-sync the sheet before recording")
+
+    # Beat times are relative to the first beat, which is where the cut starts.
+    origin = beats[0]["at"]
+    lines = [(b["at"] - origin, b["seconds"], text) for b, (_, _, text) in zip(beats, sheet)]
+    worst = max(abs(a - s) for (a, _, _), (s, _, _) in zip(lines, sheet))
+    print(f"{len(lines)} lines, worst cue-sheet drift {worst:.1f}s (timings taken from the take)\n")
 
     work = pathlib.Path(tempfile.mkdtemp())
     parts, overruns = [], []
@@ -64,7 +81,7 @@ def main() -> None:
         if spoken > hold:
             overruns.append((at, hold, spoken, text))
             mark = "!"
-        print(f"{mark} {at // 60}:{at % 60:02d}  hold {hold:2d}s  spoken {spoken:5.1f}s")
+        print(f"{mark} {int(at) // 60}:{int(at) % 60:02d}  hold {hold:4.1f}s  spoken {spoken:5.1f}s")
         parts.append((wav, at))
 
     # Delay each line to its cue and mix. amix normalises by input count, so the gain is
@@ -81,7 +98,7 @@ def main() -> None:
 
     print(f"\n{args.out}  {duration(pathlib.Path(args.out)):.1f}s   voice: {args.voice} @ {args.rate} wpm")
     for at, hold, spoken, text in overruns:
-        print(f"  OVERRUN {at // 60}:{at % 60:02d} by {spoken - hold:.1f}s - cut a sentence: {text[:70]}...")
+        print(f"  OVERRUN {int(at) // 60}:{int(at) % 60:02d} by {spoken - hold:.1f}s - cut a sentence: {text[:70]}...")
     if not overruns:
         print("  every line fits its beat")
 
