@@ -17,17 +17,30 @@ not enabled denies on the *model*; an identity with no policy denies on the *act
 
 ## Two things to do, in an account with admin
 
-**1. Attach the policy.** `bedrock-access.json` in this directory. It grants both actions,
-because Strands calls `ConverseStream` and a policy with only `InvokeModel` fails at the
-first token with an error that looks nothing like a permissions problem.
+**1. Attach the policy.** `bedrock-access.json` in this directory. Attach it as a
+customer-managed policy, not an inline one:
 
-    aws iam put-user-policy --user-name mimir-bedrock \
-      --policy-name cairn-bedrock-invoke \
+    aws iam create-policy --policy-name cairn-bedrock-invoke \
       --policy-document file://docs/deploy/bedrock-access.json
 
-A cross-region inference profile needs both ARNs: the profile itself, and the foundation
-models in every region the profile can route to. Granting only the profile denies at the
-routed region, which reads as a model problem and is not one.
+    aws iam attach-user-policy --user-name mimir-bedrock \
+      --policy-arn arn:aws:iam::034355008385:policy/cairn-bedrock-invoke
+
+Managed rather than inline for two reasons. All inline policies on one principal share a
+2048 non-whitespace character budget, and this user's is already close to full - adding
+this inline was rejected. A managed policy has its own 6144 character limit and does not
+touch that budget. It is also attachable to the App Runner instance role later, which
+needs exactly the same grant.
+
+The document grants both actions, because Strands calls `ConverseStream` and a policy
+with only `InvokeModel` fails at the first token with an error that looks nothing like a
+permissions problem.
+
+It also names two ARN shapes. A cross-region inference profile routes to a foundation
+model in one of several regions, and the call is authorised against the profile and the
+model it lands on. Granting only the profile denies at the routed region, which reads as
+a model problem and is not one. Foundation-model ARNs carry no account id, so the region
+wildcard covers every routed region in 239 characters.
 
 **2. Enable the models.** Bedrock console, us-east-1, Model access. Request access for
 Anthropic Claude Sonnet 5, Claude Haiku 4.5, and Amazon Nova Lite. Nova Lite is the
