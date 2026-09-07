@@ -19,8 +19,8 @@ from app.integrations.fixture_source import FixtureSource
 from app.policy.decisions import PolicyService
 from app.tools.action_tools import ActionRejected
 
-APPROVER = "user_shift_boss_01"
-ROLES = ["SHIFT_BOSS", "MAINTENANCE_PLANNER"]
+APPROVER = "user_shift_supervisor_01"
+ROLES = ["SHIFT_SUPERVISOR", "MAINTENANCE_PLANNER"]
 
 
 @dataclass
@@ -149,7 +149,7 @@ async def case_04() -> CaseResult:
 async def case_05() -> CaseResult:
     run = await _analysed()
     run.request_approval("scn_recover_tonnes", actor_roles=ROLES)
-    run.decide_approval(approve=True, approver_id=APPROVER, approver_role="SHIFT_BOSS")
+    run.decide_approval(approve=True, approver_id=APPROVER, approver_role="SHIFT_SUPERVISOR")
     records = run.execute_approved_actions(actor_id=APPROVER, actor_roles=ROLES)
     outcome = run.verify_outcome()
     kinds = {r.action_type for r in records}
@@ -225,7 +225,7 @@ async def case_08() -> CaseResult:
 async def case_09() -> CaseResult:
     run = await _analysed()
     run.request_approval("scn_recover_tonnes", actor_roles=ROLES)
-    run.decide_approval(approve=True, approver_id=APPROVER, approver_role="SHIFT_BOSS")
+    run.decide_approval(approve=True, approver_id=APPROVER, approver_role="SHIFT_SUPERVISOR")
     records = run.simulate_action_timeout(actor_id=APPROVER, actor_roles=ROLES)
     unknown = [r for r in records if r.status is ActionStatus.UNKNOWN]
     store_while_unknown = dict(run.gateway.simulation_store)
@@ -272,7 +272,7 @@ def _same_request(run: Run, record):
 async def case_10() -> CaseResult:
     run = await _analysed()
     run.request_approval("scn_recover_tonnes", actor_roles=ROLES)
-    approval = run.decide_approval(approve=True, approver_id=APPROVER, approver_role="SHIFT_BOSS")
+    approval = run.decide_approval(approve=True, approver_id=APPROVER, approver_role="SHIFT_SUPERVISOR")
     first = run.execute_approved_actions(actor_id=APPROVER, actor_roles=ROLES)
     store_after_first = dict(run.gateway.simulation_store)
     run.approval = approval
@@ -352,7 +352,7 @@ async def case_11() -> CaseResult:
 async def case_12() -> CaseResult:
     run = await _analysed()
     run.request_approval("scn_recover_tonnes", actor_roles=ROLES)
-    run.decide_approval(approve=True, approver_id=APPROVER, approver_role="SHIFT_BOSS")
+    run.decide_approval(approve=True, approver_id=APPROVER, approver_role="SHIFT_SUPERVISOR")
     run.approval = run.approval.model_copy(update={"expires_at": utcnow() - timedelta(seconds=1)})
     code = None
     try:

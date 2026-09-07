@@ -48,7 +48,7 @@ def test_all_stale_evidence_blocks_a_tier_three_commit():
     ]
     decision = PolicyService().evaluate(
         action_type=ActionType.CREATE_WORK_ORDER,
-        actor_roles=["SHIFT_BOSS"],
+        actor_roles=["SHIFT_SUPERVISOR"],
         correlation_id="c",
         decision_id="d",
         evidence=stale,

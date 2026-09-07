@@ -67,7 +67,7 @@ CAIRN must:
 2. Explain the likely cascading impacts without inventing missing facts.
 3. Ask specialist agents to produce constrained recovery options.
 4. Compare options by safety, throughput, schedule, maintenance, energy, and confidence.
-5. Identify decisions that require the shift boss, maintenance planner, or HSE lead.
+5. Identify decisions that require the shift supervisor, maintenance planner, or HSE lead.
 6. Produce a proposed shift plan and action list.
 7. Obtain approval before creating state-changing records.
 8. Record the decision, evidence, approver, actions, and measured outcome.

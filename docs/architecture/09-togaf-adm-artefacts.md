@@ -47,7 +47,7 @@ What is deliberately compressed in this cycle:
 
 | Stakeholder | Key concern | Viewpoint addressed | Where answered |
 |---|---|---|---|
-| Accountable operations owner (shift boss) | "Am I still the one who decides?" | Approval and decision-rights viewpoint | `04 §4.5`, approval flow in the situation room |
+| Accountable operations owner (shift supervisor) | "Am I still the one who decides?" | Approval and decision-rights viewpoint | `04 §4.5`, approval flow in the situation room |
 | HSE / geotechnical authority | "Can this thing waive a control?" | Safety control viewpoint | `04 §4.4` tier table, `PR-05` |
 | Maintenance planner | "Does it understand crew and equipment constraints?" | Reliability constraint viewpoint | `reliability_agent`, `ConstraintSet` |
 | Enterprise architect | "Does this fit the target estate or is it a silo?" | Application and integration viewpoint | `02`, `05` |

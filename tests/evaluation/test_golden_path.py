@@ -48,11 +48,11 @@ async def test_selecting_a_scenario_changes_the_scene_read_model(analysed_run):
 
 
 async def test_full_chain_reaches_a_verified_outcome(analysed_run):
-    analysed_run.request_approval("scn_recover_tonnes", actor_roles=["SHIFT_BOSS"])
+    analysed_run.request_approval("scn_recover_tonnes", actor_roles=["SHIFT_SUPERVISOR"])
     assert analysed_run.approval.status is ApprovalStatus.PENDING
-    analysed_run.decide_approval(approve=True, approver_id="user_shift_boss_01", approver_role="SHIFT_BOSS")
+    analysed_run.decide_approval(approve=True, approver_id="user_shift_supervisor_01", approver_role="SHIFT_SUPERVISOR")
     records = analysed_run.execute_approved_actions(
-        actor_id="user_shift_boss_01", actor_roles=["SHIFT_BOSS"]
+        actor_id="user_shift_supervisor_01", actor_roles=["SHIFT_SUPERVISOR"]
     )
     assert {r.action_type for r in records} == {
         ActionType.PUBLISH_SHIFT_INSTRUCTION,
@@ -66,9 +66,9 @@ async def test_full_chain_reaches_a_verified_outcome(analysed_run):
 
 async def test_audit_reconstructs_the_whole_chain(analysed_run):
     analysed_run.attempt_and_ignore = None
-    analysed_run.request_approval("scn_recover_tonnes", actor_roles=["SHIFT_BOSS"])
-    analysed_run.decide_approval(approve=True, approver_id="u", approver_role="SHIFT_BOSS")
-    analysed_run.execute_approved_actions(actor_id="u", actor_roles=["SHIFT_BOSS"])
+    analysed_run.request_approval("scn_recover_tonnes", actor_roles=["SHIFT_SUPERVISOR"])
+    analysed_run.decide_approval(approve=True, approver_id="u", approver_role="SHIFT_SUPERVISOR")
+    analysed_run.execute_approved_actions(actor_id="u", actor_roles=["SHIFT_SUPERVISOR"])
     analysed_run.verify_outcome()
 
     stages = [e.stage for e in analysed_run.view().audit]
@@ -84,9 +84,9 @@ async def test_audit_reconstructs_the_whole_chain(analysed_run):
 
 async def test_verified_outcome_does_not_pretend_the_disruption_is_over(analysed_run):
     """A projected recovery must not silently restore the truck count or clear risks."""
-    analysed_run.request_approval("scn_recover_tonnes", actor_roles=["SHIFT_BOSS"])
-    analysed_run.decide_approval(approve=True, approver_id="u", approver_role="SHIFT_BOSS")
-    analysed_run.execute_approved_actions(actor_id="u", actor_roles=["SHIFT_BOSS"])
+    analysed_run.request_approval("scn_recover_tonnes", actor_roles=["SHIFT_SUPERVISOR"])
+    analysed_run.decide_approval(approve=True, approver_id="u", approver_role="SHIFT_SUPERVISOR")
+    analysed_run.execute_approved_actions(actor_id="u", actor_roles=["SHIFT_SUPERVISOR"])
     outcome = analysed_run.verify_outcome()
 
     kpi = analysed_run.view().kpi

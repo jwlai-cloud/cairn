@@ -5,7 +5,7 @@
   "site": {
     "siteId": "site_pilbara_01",
     "name": "North Pit",
-    "shiftLabel": "Shift A - 14:00",
+    "shiftLabel": "Shift A \u00b7 06:00\u201318:00",
     "assets": [
       {
         "assetId": "bench_01",
@@ -49,7 +49,7 @@
           "y": 0,
           "z": -12
         },
-        "detail": "Gyratory, nominal 2400 t/h"
+        "detail": "Gyratory, nominal 2 400 t/h, crusher-limited operation"
       },
       {
         "assetId": "asset_processing_plant_01",
@@ -105,7 +105,7 @@
           "z": 6
         },
         "homeRouteId": "route_east_ramp",
-        "detail": "793F, loaded"
+        "detail": "793F \u00b7 227 t payload, loaded"
       },
       {
         "assetId": "asset_truck_202",
@@ -117,7 +117,7 @@
           "z": 2
         },
         "homeRouteId": "route_east_ramp",
-        "detail": "793F, loaded"
+        "detail": "793F \u00b7 227 t payload, loaded"
       },
       {
         "assetId": "asset_truck_203",
@@ -129,7 +129,7 @@
           "z": -4
         },
         "homeRouteId": "route_east_ramp",
-        "detail": "793F, tipping"
+        "detail": "793F \u00b7 227 t payload, tipping"
       },
       {
         "assetId": "asset_truck_204",
@@ -141,7 +141,7 @@
           "z": 14
         },
         "homeRouteId": "route_east_ramp",
-        "detail": "793F, hydraulic fault"
+        "detail": "793F \u00b7 227 t payload, hydraulic fault"
       },
       {
         "assetId": "asset_truck_205",
@@ -153,7 +153,7 @@
           "z": -14
         },
         "homeRouteId": "route_north_ramp",
-        "detail": "793F, returning empty"
+        "detail": "793F \u00b7 227 t payload, returning empty"
       },
       {
         "assetId": "asset_truck_206",
@@ -165,7 +165,7 @@
           "z": -22
         },
         "homeRouteId": "route_north_ramp",
-        "detail": "793F, returning empty"
+        "detail": "793F \u00b7 227 t payload, returning empty"
       },
       {
         "assetId": "asset_truck_207",
@@ -177,7 +177,7 @@
           "z": 8
         },
         "homeRouteId": "route_stockpile_link",
-        "detail": "789D, stockpile rehandle"
+        "detail": "789D \u00b7 181 t payload, stockpile rehandle"
       },
       {
         "assetId": "asset_truck_208",
@@ -189,7 +189,7 @@
           "z": 20
         },
         "homeRouteId": "route_workshop_spur",
-        "detail": "789D, spare"
+        "detail": "789D \u00b7 181 t payload, spare"
       }
     ],
     "routes": [
@@ -313,8 +313,8 @@
     ]
   },
   "baselineKpi": {
-    "tonnesMoved": 8200,
-    "tonnesTarget": 12000,
+    "tonnesMoved": 16900,
+    "tonnesTarget": 28000,
     "crusherAvailabilityPercent": 100.0,
     "activeTrucks": 8,
     "weatherWindowMinutes": null,
@@ -438,8 +438,8 @@
       "title": "Shift target at risk; ROM live buffer only 6200 t",
       "measurements": {
         "stockpileLiveTonnes": 6200.0,
-        "shiftTargetTonnes": 12000.0,
-        "tonnesMovedToDate": 8200.0
+        "shiftTargetTonnes": 28000.0,
+        "tonnesMovedToDate": 16900.0
       },
       "freshnessSeconds": 8,
       "evidenceIds": [
@@ -451,7 +451,7 @@
         "observationLagSeconds": 8
       },
       "metadata": {
-        "note": "Rehandle from stockpile competes with crusher feed"
+        "note": "Crusher-limited shift. Rehandle from stockpile competes with fresh crusher feed for the same 2 400 t/h."
       }
     }
   ],
@@ -465,7 +465,7 @@
       "freshnessSeconds": 3,
       "reliability": 0.95,
       "dataClassification": "INTERNAL",
-      "summary": "Crusher throughput 1800 t/h against 2400 t/h nominal for 6 consecutive minutes."
+      "summary": "Crusher throughput 1 800 t/h against 2 400 t/h nominal for 6 consecutive minutes. At 3.9 hours remaining this is a 2 300 t shortfall against plan."
     },
     {
       "evidenceId": "evd_crusher_vibration",
@@ -549,7 +549,7 @@
       "freshnessSeconds": 8,
       "reliability": 0.96,
       "dataClassification": "INTERNAL",
-      "summary": "8200 t moved against a 12000 t shift target; ROM live buffer 6200 t."
+      "summary": "16 900 t moved against a 28 000 t crusher-limited shift target; ROM live buffer 6 200 t, about 2.5 hours of feed."
     },
     {
       "evidenceId": "evd_geotech_ramp_control",

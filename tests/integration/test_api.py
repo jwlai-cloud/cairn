@@ -32,7 +32,7 @@ def test_full_demo_path_over_http(api_client):
     early = api_client.post("/v1/actions")
     assert early.status_code == 403, "an action before approval must be refused"
 
-    view = api_client.post("/v1/approvals/decision", json={"approve": True, "approverRole": "SHIFT_BOSS"}).json()
+    view = api_client.post("/v1/approvals/decision", json={"approve": True, "approverRole": "SHIFT_SUPERVISOR"}).json()
     assert view["approval"]["status"] == "APPROVED"
     assert view["approval"]["approvalToken"]
 

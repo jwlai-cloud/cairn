@@ -49,23 +49,23 @@ RULES: dict[ActionType, Rule] = {
     ActionType.CREATE_WORK_ORDER: Rule(
         "RULE-T3-CREATE-WO",
         TIER_3_COMMIT,
-        ("SHIFT_BOSS", "MAINTENANCE_PLANNER"),
+        ("SHIFT_SUPERVISOR", "MAINTENANCE_PLANNER"),
         "Creates a committed maintenance record; requires an accountable approver.",
     ),
     ActionType.PUBLISH_SHIFT_INSTRUCTION: Rule(
         "RULE-T3-PUBLISH-SI",
         TIER_3_COMMIT,
-        ("SHIFT_BOSS",),
+        ("SHIFT_SUPERVISOR",),
         "Directs crews on shift; requires the accountable operations owner.",
     ),
     ActionType.CREATE_ESCALATION: Rule(
-        "RULE-T3-ESCALATE", TIER_3_COMMIT, ("SHIFT_BOSS",), "Raises a tracked escalation record."
+        "RULE-T3-ESCALATE", TIER_3_COMMIT, ("SHIFT_SUPERVISOR",), "Raises a tracked escalation record."
     ),
     ActionType.SEND_INTERNAL_NOTIFICATION: Rule(
-        "RULE-T3-NOTIFY", TIER_3_COMMIT, ("SHIFT_BOSS",), "Sends an internal operational notification."
+        "RULE-T3-NOTIFY", TIER_3_COMMIT, ("SHIFT_SUPERVISOR",), "Sends an internal operational notification."
     ),
     ActionType.UPDATE_DECISION_STATUS: Rule(
-        "RULE-T3-DECISION", TIER_3_COMMIT, ("SHIFT_BOSS",), "Updates the authoritative decision record."
+        "RULE-T3-DECISION", TIER_3_COMMIT, ("SHIFT_SUPERVISOR",), "Updates the authoritative decision record."
     ),
     ActionType.OVERRIDE_SAFETY_INTERLOCK: Rule(
         "RULE-T4-PROHIBITED-INTERLOCK",

@@ -110,7 +110,7 @@ Minimum event types for the demo:
     "affectedAssets": ["asset_primary_crusher_01", "asset_truck_204"]
   },
   "riskFindings": ["risk_01J..."],
-  "requiredApprovals": ["SHIFT_BOSS", "MAINTENANCE_PLANNER"],
+  "requiredApprovals": ["SHIFT_SUPERVISOR", "MAINTENANCE_PLANNER"],
   "evidenceIds": ["evd_01J...", "evd_01K..."]
 }
 ```
@@ -130,7 +130,7 @@ Agents must return a list of options, not only a single recommendation. The reco
     "siteId": "site_pilbara_01",
     "assetIds": ["asset_primary_crusher_01", "asset_truck_204"]
   },
-  "requiredRoles": ["SHIFT_BOSS"],
+  "requiredRoles": ["SHIFT_SUPERVISOR"],
   "expiresAt": "2026-09-06T10:45:00Z",
   "policyDecisionId": "pol_01J...",
   "status": "PENDING"
@@ -154,7 +154,7 @@ PENDING → APPROVED → CONSUMED
   "actionType": "CREATE_WORK_ORDER",
   "approvalToken": "opaque-server-token",
   "idempotencyKey": "act:v1:scn_01J:work-order:crusher-inspection",
-  "actorId": "user_shift_boss_01",
+  "actorId": "user_shift_supervisor_01",
   "policyDecisionId": "pol_01J...",
   "correlationId": "corr_01J...",
   "expectedVersion": 4,

@@ -109,7 +109,7 @@ This is the most important enterprise credibility moment: the model can recommen
 
 ### 2:15–2:40 — Human approval and simulated action
 
-The shift boss approves the selected recovery plan. CAIRN creates a simulation-only work order and shift instruction with an approval token and idempotency key.
+The shift supervisor approves the selected recovery plan. CAIRN creates a simulation-only work order and shift instruction with an approval token and idempotency key.
 
 The scene updates the affected truck routes and marks the plan as "approved — execution simulated."
 
