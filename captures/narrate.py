@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 """Build a narration track from the cue sheet, placed on the video's own timeline.
 
-Takes the words from the table in captures/narration.md and the timings from
-captures/beats.json, which capture.mjs measured against the recording. The sheet's own
-cue column is for the person holding it, not for this: hand-written times drift from the
-take, which is exactly how the captions once landed twelve seconds off their own shots.
-Each line is laid at its beat rather than concatenated, so a line that runs long overruns
+Words and timings both come from the table in captures/narration.md, because that sheet
+is now the output timeline. edit.sh assembles the cut to match it: each source is
+corrected for its own recording slowdown and then trimmed to the durations declared here,
+which was verified at 288.1 seconds against the sheet's 4:48.
+
+An earlier version read timings from captures/beats.json instead, to avoid hand-written
+times drifting from the take. That was right when the video was one continuous recording.
+It stopped being right once the three TOGAF frames were spliced in: they have no app
+beats, so the sheet has fifteen cues where the app take has twelve.
+
+Each line is laid at its cue rather than concatenated, so a line that runs long overruns
 only its own beat instead of pushing every later line out of sync with the picture.
 Overruns are reported rather than silently trimmed, because the fix is to cut the
 sentence, not to talk faster.
@@ -65,16 +71,10 @@ def main() -> None:
     if not sheet:
         sys.exit(f"no cues parsed from {args.script}")
 
-    beats = json.loads(pathlib.Path(args.beats).read_text())
-    if len(beats) != len(sheet):
-        sys.exit(f"{len(sheet)} lines in the cue sheet but {len(beats)} beats in the take; "
-                 "they are written one to one, so re-sync the sheet before recording")
-
-    # Beat times are relative to the first beat, which is where the cut starts.
-    origin = beats[0]["at"]
-    lines = [(b["at"] - origin, b["seconds"], text) for b, (_, _, text) in zip(beats, sheet)]
-    worst = max(abs(a - s) for (a, _, _), (s, _, _) in zip(lines, sheet))
-    print(f"{len(lines)} lines, worst cue-sheet drift {worst:.1f}s (timings taken from the take)\n")
+    lines = sheet
+    span = sheet[-1][0] + sheet[-1][1]
+    print(f"{len(lines)} lines over {int(span)//60}:{int(span)%60:02d} "
+          f"({300 - span:.0f}s under the cap)\n")
 
     work = pathlib.Path(tempfile.mkdtemp())
     parts, overruns = [], []

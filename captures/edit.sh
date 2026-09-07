@@ -51,10 +51,13 @@ echo "  post   from ${POST_START}s"
 
 # Every source is normalised to the same size, rate and pixel format so concat can copy.
 cut() { # cut <in> <ss> <t|-> <slowdown> <out>
-  local t=()
-  [ "$3" != "-" ] && t=(-t "$3")
-  ffmpeg -v error -y -ss "$2" "${t[@]}" -i "$1" \
-    -vf "setpts=PTS/${4},scale=3840:2400:force_original_aspect_ratio=decrease,pad=3840:2400:-1:-1:color=#DEDACF,setsar=1" \
+  # A plain string, not an array: macOS ships bash 3.2, where expanding an empty array
+  # under `set -u` is an unbound-variable error. The value is a bare number, so leaving
+  # it unquoted to word-split is safe here.
+  local span=""
+  [ "$3" != "-" ] && span="-t $3"
+  ffmpeg -v error -y -ss "$2" $span -i "$1" \
+    -vf "setpts=PTS/${4},scale=3840:2400:force_original_aspect_ratio=decrease,pad=3840:2400:-1:-1:color=0xDEDACF,setsar=1" \
     -an -c:v libx264 -preset medium -crf 19 -pix_fmt yuv420p -r 30 "$5"
 }
 
