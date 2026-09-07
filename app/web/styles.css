@@ -87,6 +87,9 @@ body {
 .agent.failed .agent-state { background: var(--red); }
 .agent-headline { font-size: 11px; color: #c3d0e2; margin-top: 4px; }
 .agent-sub { font-size: 10px; color: var(--muted); margin-top: 4px; font-family: var(--mono); }
+.agent-tools { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.tool { font-family: var(--mono); font-size: 9px; padding: 1px 5px; border-radius: 2px; border: 1px solid #24405e; color: var(--blue); background: #0e1622; }
+.tool.blocked { border-color: #7a2b3c; color: var(--red); background: #1d1218; text-decoration: line-through; }
 .agent details { margin-top: 5px; } .agent summary { cursor: pointer; font-size: 10px; color: var(--blue); font-family: var(--mono); }
 .agent details ul { margin: 5px 0 0; padding-left: 16px; font-size: 11px; color: var(--muted); }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }

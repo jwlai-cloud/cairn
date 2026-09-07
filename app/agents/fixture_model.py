@@ -71,10 +71,16 @@ class FixtureModel(Model):
         reducer: Callable[[dict[str, dict[str, Any]]], BaseModel],
         *,
         node_id: str,
+        structured_tool_name: str,
         requires: tuple[str, ...] = (),
+        tool_plan: tuple[tuple[str, dict[str, Any]], ...] = (),
     ) -> None:
         self._reducer = reducer
         self._requires = requires
+        self._structured_tool_name = structured_tool_name
+        # Read tools this node calls before it answers. Without this the tool registry,
+        # the allow-list hook and the tool-execution loop would never actually run.
+        self._tool_plan = tool_plan
         self._config: dict[str, Any] = {
             "model_id": MODEL_ID_FIXTURE,
             "node_id": node_id,
@@ -104,6 +110,17 @@ class FixtureModel(Model):
     ) -> AsyncGenerator[dict[str, Any], None]:
         yield {"output": self._resolve(list(prompt))}
 
+    def _tool_calls_completed(self, messages: list[dict]) -> int:
+        """How many of this node's planned read-tool calls already have results."""
+        prefix = f"cairn-{self._config['node_id']}-"
+        done = 0
+        for message in messages:
+            for block in message.get("content", []) or []:
+                result = block.get("toolResult")
+                if result and str(result.get("toolUseId", "")).startswith(prefix):
+                    done += 1
+        return done
+
     async def stream(
         self,
         messages: list[dict],
@@ -111,6 +128,33 @@ class FixtureModel(Model):
         system_prompt: str | None = None,
         **kwargs: Any,
     ) -> AsyncIterable[dict[str, Any]]:
+        completed = self._tool_calls_completed(messages)
+        if tool_specs and completed < len(self._tool_plan):
+            # Gather evidence first, exactly like a real model would, so the hook chain
+            # and the node allow-list are exercised on every run.
+            name, tool_input = self._tool_plan[completed]
+            yield {"messageStart": {"role": "assistant"}}
+            yield {
+                "contentBlockStart": {
+                    "start": {
+                        "toolUse": {
+                            "name": name,
+                            "toolUseId": f"cairn-{self._config['node_id']}-{completed}",
+                        }
+                    }
+                }
+            }
+            yield {"contentBlockDelta": {"delta": {"toolUse": {"input": json.dumps(tool_input)}}}}
+            yield {"contentBlockStop": {}}
+            yield {"messageStop": {"stopReason": "tool_use"}}
+            yield {
+                "metadata": {
+                    "usage": {"inputTokens": 0, "outputTokens": 0, "totalTokens": 0},
+                    "metrics": {"latencyMs": 0},
+                }
+            }
+            return
+
         payload = self._resolve(messages)
         yield {"messageStart": {"role": "assistant"}}
         if tool_specs:
@@ -118,7 +162,12 @@ class FixtureModel(Model):
             # contract directly so the agent's typed boundary is exercised, not bypassed.
             yield {
                 "contentBlockStart": {
-                    "start": {"toolUse": {"name": tool_specs[0]["name"], "toolUseId": f"fixture-{id(self)}"}}
+                    "start": {
+                        "toolUse": {
+                            "name": self._structured_tool_name,
+                            "toolUseId": f"fixture-structured-{id(self)}",
+                        }
+                    }
                 }
             }
             yield {"contentBlockDelta": {"delta": {"toolUse": {"input": payload.model_dump_json(by_alias=True)}}}}

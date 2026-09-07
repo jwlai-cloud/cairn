@@ -217,6 +217,8 @@ Observe → Correlate → Assess → Generate options → Review policy
 | No direct OT control path | `PR-05` | Met | Tier 4 enumerated and denied for all roles |
 | Read/proposal/state-changing tools separated | `07` | Met | Three modules; only the gateway commits |
 | Typed structured outputs at every agent boundary | `03 §3.8` | Met | `structured_output_model` on every node |
+| Node-scoped read tools, separate from write paths | `03 §3.5` | Met | `app/agents/tools.py`; no agent is registered with a state-changing tool |
+| Hooks for correlation, tool validation, audit and timing | `03 §3.6` | Met | `app/agents/hooks.py`; `BeforeToolCallEvent.cancel_tool` enforces the allow-list |
 | Idempotency key + approval token on every state change | `07` | Met | Gateway refuses without both; replay test asserts no second artefact |
 | Synthetic data with deterministic seed | `07` | Met | `fixtures/scenarios/compound-disruption.json`, replay signature equality |
 | Fail closed | `PR-02` | Met | Fail-closed, expiry and stale-evidence tests |
@@ -267,6 +269,8 @@ Observe → Correlate → Assess → Generate options → Review policy
 | AR-13 | Never display raw chain-of-thought | Constraint | Must | `test_no_chain_of_thought_field_is_exposed` | Met |
 | AR-14 | Scene legible within two seconds | Non-functional (usability) | Should | Labelled scene, five-tile KPI strip | Met, subjective |
 | AR-15 | Survive process restart with audit intact | Non-functional (durability) | Could | — | **Deferred to increment 2** |
+| AR-16 | Every specialist gathers evidence through a tool before answering | Non-functional (assurance) | Must | `test_every_specialist_actually_calls_at_least_one_tool` | Met |
+| AR-17 | A tool outside a node's allow-list is cancelled at call time | Non-functional (safety) | Must | `test_a_tool_outside_the_node_allow_list_is_cancelled` | Met |
 
 ### Traceability summary
 

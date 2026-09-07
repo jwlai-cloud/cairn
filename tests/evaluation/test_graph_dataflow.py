@@ -161,7 +161,12 @@ def test_a_node_that_loses_its_upstream_fails_loudly():
     """A silent fallback is how a graph starts looking connected while nodes ignore each other."""
     from app.agents.fixture_model import FixtureModel
 
-    model = FixtureModel(lambda _u: None, node_id="scenario_planner", requires=("situation", "risk"))
+    model = FixtureModel(
+        lambda _u: None,
+        node_id="scenario_planner",
+        structured_tool_name="ScenarioSet",
+        requires=("situation", "risk"),
+    )
     with pytest.raises(UpstreamParseError) as excinfo:
         model._resolve([{"role": "user", "content": [{"text": "Original Task: nothing upstream"}]}])
     assert "situation" in str(excinfo.value)

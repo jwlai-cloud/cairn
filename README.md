@@ -32,7 +32,7 @@ Open <http://127.0.0.1:8000>.
 
 ```bash
 source .venv/bin/activate
-python -m pytest -q                # 60 tests
+python -m pytest -q                # 72 tests
 python -m pytest tests/safety -q   # safety cases only
 ```
 
@@ -70,6 +70,8 @@ Two extra controls worth showing: **use 2D fallback** (top-right of the scene, w
 | Approval | Scoped, role-bound, expiring, single-use, bound to a plan version and an evidence hash. Changing the plan supersedes it. | `app/domain/run_service.py` |
 | Idempotency | The key is claimed before any effect. A duplicate replays; the same key with a different payload is a `409`. | `app/tools/action_tools.py` |
 | Bounded orchestration | Strands `GraphBuilder` with a fixed topology, max node executions, and execution/node timeouts. No dynamic node or tool creation. | `app/agents/graph.py` |
+| Node-scoped tools | Each specialist gets only its own read tools. Read, proposal and state-changing tools are separate modules, so no agent can reach a write path. | `app/agents/tools.py` |
+| Hooks as a control surface | `BeforeToolCallEvent.cancel_tool` cancels any tool outside the node's allow-list; `AfterToolCallEvent` records status, real duration and a response hash. | `app/agents/hooks.py` |
 | Provenance | Every agent output carries evidence IDs, assumptions, unknowns and confidence. | `app/domain/models.py` |
 | Uncertainty | Stale and conflicting sources are surfaced in the read model and the UI. Neither conflicting forecast is discarded. | `Run._flag_stale_and_conflicting` |
 | No chain-of-thought | The read model exposes status, findings, evidence and uncertainty only. A test asserts no reasoning-trace field exists. | `tests/contract/` |
