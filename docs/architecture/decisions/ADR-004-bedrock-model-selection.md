@@ -40,15 +40,23 @@ Enable three models, each for a stated reason.
 | Portability proof | GPT-5.6 Luna | `us.openai.gpt-5.6-luna` | A different vendor running the identical typed contracts is what makes the provider-neutrality claim observable rather than asserted. |
 | Smoke test | Nova Lite | `us.amazon.nova-lite-v1:0` | Cheapest path to "does a real model satisfy the contract at all", and first-party so access is usually immediate. |
 
-Cost against CAIRN's measured workload of 15,357 input and 3,647 output tokens over 11 model
-calls per graph run:
+Cost against CAIRN's workload. The figures below are **corrected against a real run**:
+two Bedrock runs on 2026-09-07 measured 30,253 and 31,818 input tokens, and 2,504 and
+4,006 output. The original estimate of 15,357 input was roughly half the truth, so every
+number in this table moved. Input is stable within five per cent, because it is the
+fixture plus the prompts; output varies by about sixty per cent, because it is the
+model's verbosity. Input therefore dominates at roughly twelve to one, and the input
+rate is what sets the cost.
+
+Basis: 31,000 input and 3,250 output tokens per graph run.
+Raw measurement in `docs/architecture/measurements/nova-lite-run-2026-09-07.json`.
 
 | Model | Per run | Evaluation suite (~16 runs) | $50 of credits |
 |---|---|---|---|
-| Claude Opus 5 | $0.1680 | $2.69 | ~298 runs |
-| **Claude Sonnet 5** | **$0.0672** | $1.07 | ~744 runs |
-| **GPT-5.6 Luna** (geo) | $0.0082 | $0.13 | ~6,103 runs |
-| **Nova Lite** | not published on the model card | — | — |
+| Claude Opus 5 | $0.2363 | $3.78 | ~212 runs |
+| **Claude Sonnet 5** | **$0.0945** | $1.51 | ~529 runs |
+| **GPT-5.6 Luna** (geo) | $0.0111 | $0.18 | ~4,500 runs |
+| **Nova Lite** | rate not published on the model card | — | — |
 
 Opus 5 is not enabled. At 2.5x Sonnet 5 for one demo it does not earn its place; if a showcase
 run is wanted for the video it is a single ~$0.17 invocation.
