@@ -45,33 +45,33 @@ h1{font-family:var(--cond);font-size:34px;font-weight:700;letter-spacing:-.01em;
 .sub{color:var(--ink-dim);font-size:16px;max-width:74ch}
 
 /* ---------------------------------------------------------------- slide A: the ADM */
-.adm{flex:1;display:grid;grid-template-columns:430px 1fr;gap:52px;align-items:center;margin-top:4px}
-.wheel{position:relative;width:430px;height:430px}
+.adm{flex:1;display:grid;grid-template-columns:352px 1fr;gap:56px;align-items:center;margin-top:4px}
+.wheel{position:relative;width:352px;height:352px;opacity:.66}
 .wheel .ring{position:absolute;inset:0;border-radius:50%;border:1px solid var(--rule)}
 .wheel .hub{position:absolute;inset:33%;border-radius:50%;background:var(--raise);
   border:1px solid var(--rule-hi);display:grid;place-items:center;text-align:center;padding:10px}
 .wheel .hub u{font-family:var(--cond);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
   color:var(--ink-dim);text-decoration:none;line-height:1.35}
-.ph{position:absolute;width:88px;height:88px;margin:-44px 0 0 -44px;border-radius:50%;
+.ph{position:absolute;width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;
   background:var(--plate);border:1px solid var(--rule);display:grid;place-items:center;text-align:center}
-.ph b{font-family:var(--cond);font-size:19px;font-weight:700;line-height:1}
-.ph i{font-family:var(--mono);font-size:8.5px;font-style:normal;color:var(--ink-faint);
+.ph b{font-family:var(--cond);font-size:15px;font-weight:700;line-height:1}
+.ph i{font-family:var(--mono);font-size:7.5px;font-style:normal;color:var(--ink-faint);
   letter-spacing:.04em;display:block;margin-top:3px;max-width:74px}
-.ph.on{background:var(--ok-bg);border-color:var(--ok-line)}
-.ph.on b{color:var(--malachite)}
+.ph.on{background:var(--plate);border-color:var(--rule-hi)}
+.ph.on b{color:var(--ink-dim)}
 .ph.off{opacity:.42;border-style:dashed}
 
 .moves{display:flex;flex-direction:column;gap:0}
 .mv{display:grid;grid-template-columns:32px 1fr;gap:16px;padding:19px 0;border-bottom:1px dashed var(--rule)}
 .mv:last-child{border-bottom:0}
 .mv u{font-family:var(--mono);font-size:12px;color:var(--haematite);text-decoration:none;padding-top:3px}
-.mv b{font-family:var(--cond);font-size:19px;letter-spacing:.01em}
+.mv b{font-family:var(--cond);font-size:21px;letter-spacing:.01em}
 .mv span{display:block;color:var(--ink-dim);font-size:14.5px;margin-top:3px}
 .mv code{font-family:var(--mono);font-size:11.5px;color:var(--survey)}
 
 /* ------------------------------------------------------------- slide B: the chain */
 .chain{flex:1;display:flex;flex-direction:column;justify-content:center;gap:0}
-.lk{display:grid;grid-template-columns:158px 1fr 254px;gap:20px;align-items:center;
+.lk{display:grid;grid-template-columns:150px 1fr 340px;gap:18px;align-items:center;
   padding:21px 20px;background:var(--plate);border:1px solid var(--rule);clip-path:var(--chamfer);
   opacity:0;transform:translateX(-14px);transition:opacity .5s ease,transform .5s ease}
 .lk.show{opacity:1;transform:none}
@@ -83,7 +83,7 @@ h1{font-family:var(--cond);font-size:34px;font-weight:700;letter-spacing:-.01em;
 .lk u{font-family:var(--cond);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--ink-faint);text-decoration:none}
 .lk b{font-family:var(--sans);font-weight:600;font-size:18px;display:block;margin-top:4px}
-.lk .id{font-family:var(--mono);font-size:12px;color:var(--survey);text-align:right}
+.lk .id{font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--survey);text-align:right}
 .lk.q{background:var(--raise);border-color:var(--rule-hi)}
 .lk.q b{font-style:italic}
 .lk.t{background:var(--ok-bg);border-color:var(--ok-line)}
@@ -102,7 +102,9 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid rgba(191,184,168,.42);vertical-
 td.k{font-family:var(--mono);color:var(--haematite);white-space:nowrap}
 td.v{font-family:var(--mono);font-size:12px;color:var(--malachite);white-space:nowrap}
 tr.hi td{background:var(--ok-bg)}
-.fix{display:flex;flex-direction:column;gap:14px;align-self:start}
+.fix{display:flex;flex-direction:column;gap:14px;align-self:start;
+  opacity:0;transform:translateX(16px);transition:opacity .6s ease,transform .6s ease}
+.fix.show{opacity:1;transform:none}
 .fix .cap{font-family:var(--cond);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
 .box{padding:16px 18px;border:1px solid var(--rule);background:var(--plate);clip-path:var(--chamfer)}
 .box.bad{background:var(--hot-bg);border-color:var(--hot-line)}
@@ -122,8 +124,8 @@ tr.hi td{background:var(--ok-bg)}
 <section class="slide" id="a">
   <div class="head"><b>Method</b><span>TOGAF ADM · increment 0 · one narrow pass</span></div>
   <h1>Concerns become tests, not slideware</h1>
-  <p class="sub">One capability, one increment, one architecture contract. Phases that ran
-    are solid; the rest are declared unrun rather than implied.</p>
+  <p class="sub">The ADM used as a lens on one increment. Not a claim to have run a full
+    enterprise cycle. The four moves on the right are where the work shows.</p>
   <div class="adm">
     <div class="wheel">
       <div class="ring"></div>
@@ -152,7 +154,7 @@ tr.hi td{background:var(--ok-bg)}
     </div>
   </div>
   <div class="foot"><span>docs/architecture/09-togaf-adm-artefacts.md</span>
-    <span>Phase H not run: no post-increment change cycle exists yet</span></div>
+    <span>Prototype coverage, not full ADM execution &middot; Phase H not run</span></div>
 </section>
 
 <!-- ========================================================== B · the traced chain -->
@@ -168,7 +170,7 @@ tr.hi td{background:var(--ok-bg)}
     <div class="arrow" data-step="4"></div>
     <div class="lk" data-step="4"><u>Building block</u><b>Deterministic policy service</b><span class="id">SBB-04 · app/policy/decisions.py</span></div>
     <div class="arrow" data-step="5"></div>
-    <div class="lk t" data-step="5"><u>Verification</u><b>test_tier_four_is_denied_for_every_role</b><span class="id">passing · fails the build if a model is called</span></div>
+    <div class="lk t" data-step="5"><u>Verification</u><b>The policy path never invokes a model</b><span class="id">test_policy_denial_does_not_touch_the_agent_layer<br>passing · patches three seams</span></div>
   </div>
   <div class="foot"><span>Every identifier resolves to a real artefact in this repository.</span>
     <span>Same chain for all 17 requirements</span></div>
@@ -197,7 +199,7 @@ tr.hi td{background:var(--ok-bg)}
       </table>
       <div class="cap" style="margin-top:9px">11 of 17 shown</div>
     </div>
-    <div class="fix">
+    <div class="fix" id="fix">
       <div class="cap">Caught in review, not by a test</div>
       <div class="box bad"><u>Shift target, as first written</u><div class="n">12,000 t</div>
         <p>A quarter of what the declared fleet and crusher could move in a twelve-hour shift.</p></div>
@@ -215,7 +217,7 @@ tr.hi td{background:var(--ok-bg)}
 
 <script>
 // Lay the eight phases plus Preliminary around the ring.
-const R = 179, C = 215;
+const R = 146, C = 176;
 [['pP',-90],['pA',-50],['pB',-10],['pC',30],['pD',70],['pE',110],['pF',150],['pG',190],['pH',230]]
   .forEach(([id, deg]) => {
     const r = deg * Math.PI / 180, el = document.getElementById(id);
@@ -226,6 +228,9 @@ const R = 179, C = 215;
 window.revealStep = (n) => document.querySelectorAll(`#b [data-step="${n}"]`)
   .forEach((el) => el.classList.add('show'));
 window.revealAll = () => { for (let i = 1; i <= 5; i++) window.revealStep(i); };
+// Slide C is a split beat. The narration is about the correction, so the table holds
+// the first seconds alone; arriving with both at once says neither.
+window.revealFix = () => document.getElementById('fix')?.classList.add('show');
 // Select from the hash, and keep following it. Navigating to a different hash on the
 // same document does not re-run this script, which silently left the first slide up.
 const pick = () => { document.body.dataset.slide = (location.hash.slice(1) || 'a'); };

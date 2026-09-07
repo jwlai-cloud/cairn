@@ -49,6 +49,16 @@ for (const slide of ['a', 'b', 'c']) {
       await page.evaluate(() => window.revealAll());
       await page.waitForTimeout(700);
     }
+  } else if (slide === 'c') {
+    // Split beat: table alone, then the correction. Six seconds, per the review.
+    if (VIDEO) {
+      await page.waitForTimeout(6000);
+      await page.evaluate(() => window.revealFix());
+      await page.waitForTimeout((HOLD.c - 6) * 1000);
+    } else {
+      await page.evaluate(() => window.revealFix());
+      await page.waitForTimeout(700);
+    }
   } else if (VIDEO) {
     await page.waitForTimeout(HOLD[slide] * 1000);
   }
