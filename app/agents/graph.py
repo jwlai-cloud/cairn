@@ -44,8 +44,13 @@ from app.domain.models import (
 
 PROMPT_DIR = Path(__file__).parent / "prompts"
 
-BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 CORRELATION_ID = "corr_compound_disruption_v1"
+
+
+def _bedrock_model_id() -> str:
+    from app.config import settings
+
+    return settings.BEDROCK_MODEL_ID
 
 MAX_NODE_EXECUTIONS = 12
 EXECUTION_TIMEOUT_SECONDS = 90
@@ -124,7 +129,13 @@ def _model_for(spec: NodeSpec, ctx: GraphContext, mode: str):
     if mode == "bedrock":  # pragma: no cover - requires AWS credentials, not exercised in CI
         from strands.models import BedrockModel
 
-        return BedrockModel(model_id=BEDROCK_MODEL_ID, temperature=0.0)
+        from app.config import settings
+
+        return BedrockModel(
+            model_id=settings.BEDROCK_MODEL_ID,
+            region_name=settings.BEDROCK_REGION,
+            temperature=0.0,
+        )
     requires = () if spec.node_id != PLANNER.node_id else tuple(s.node_id for s in SPECIALISTS)
     return FixtureModel(
         _reducer_for(spec, ctx),
@@ -218,5 +229,5 @@ async def run_graph(prompt: str, ctx: GraphContext, mode: str = "fixture") -> Gr
         timings=timings,
         statuses=statuses,
         telemetry=telemetry,
-        model_id=MODEL_ID_FIXTURE if mode == "fixture" else BEDROCK_MODEL_ID,
+        model_id=MODEL_ID_FIXTURE if mode == "fixture" else _bedrock_model_id(),
     )
