@@ -30,6 +30,8 @@ from strands.multiagent import GraphBuilder
 from app.agents import reducers
 from app.agents.context import GraphContext
 from app.agents.fixture_model import FixtureModel
+from app.agents.hooks import CairnAgentHooks, NodeTelemetry
+from app.agents.tools import NODE_TOOLS, build_read_tools, tools_for
 from app.domain.models import (
     MODEL_ID_FIXTURE,
     PROMPT_VERSION,
@@ -41,6 +43,9 @@ from app.domain.models import (
 )
 
 PROMPT_DIR = Path(__file__).parent / "prompts"
+
+BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+CORRELATION_ID = "corr_compound_disruption_v1"
 
 MAX_NODE_EXECUTIONS = 12
 EXECUTION_TIMEOUT_SECONDS = 90
@@ -67,6 +72,19 @@ PLANNER = NodeSpec(
 )
 
 NODE_OUTPUT_MODELS: dict[str, type[BaseModel]] = {s.node_id: s.output_model for s in (*SPECIALISTS, PLANNER)}
+
+# Read tools each node consults before answering, with their arguments. Deterministic on
+# purpose: the same run always gathers the same evidence in the same order.
+TOOL_PLANS: dict[str, tuple[tuple[str, dict], ...]] = {
+    "situation": (("get_recent_events", {}), ("get_evidence", {})),
+    "reliability": (
+        ("get_maintenance_constraints", {}),
+        ("get_asset_status", {"asset_id": "asset_primary_crusher_01"}),
+    ),
+    "operations": (("get_production_constraints", {}),),
+    "risk": (("get_weather_window", {}),),
+    "scenario_planner": (),
+}
 
 
 def load_prompt(spec: NodeSpec) -> str:
@@ -103,18 +121,38 @@ def _model_for(spec: NodeSpec, ctx: GraphContext, mode: str):
     if mode == "bedrock":  # pragma: no cover - requires AWS credentials, not exercised in CI
         from strands.models import BedrockModel
 
-        return BedrockModel(model_id="us.anthropic.claude-sonnet-4-5-20250929-v1:0", temperature=0.0)
+        return BedrockModel(model_id=BEDROCK_MODEL_ID, temperature=0.0)
     requires = () if spec.node_id != PLANNER.node_id else tuple(s.node_id for s in SPECIALISTS)
-    return FixtureModel(_reducer_for(spec, ctx), node_id=spec.node_id, requires=requires)
+    return FixtureModel(
+        _reducer_for(spec, ctx),
+        node_id=spec.node_id,
+        structured_tool_name=spec.output_model.__name__,
+        requires=requires,
+        tool_plan=TOOL_PLANS.get(spec.node_id, ()),
+    )
 
 
-def _agent(spec: NodeSpec, ctx: GraphContext, mode: str) -> Agent:
+def _agent(
+    spec: NodeSpec, ctx: GraphContext, mode: str, registry: dict, telemetry: dict[str, NodeTelemetry]
+) -> Agent:
+    allowed = NODE_TOOLS.get(spec.node_id, ())
+    telemetry[spec.node_id] = NodeTelemetry(node_id=spec.node_id, allowed_tools=allowed)
     return Agent(
         model=_model_for(spec, ctx, mode),
         name=spec.node_id,
         description=spec.role,
         system_prompt=load_prompt(spec),
         structured_output_model=spec.output_model,
+        tools=tools_for(spec.node_id, registry),
+        hooks=[
+            CairnAgentHooks(
+                node_id=spec.node_id,
+                allowed_tools=allowed,
+                structured_tool_name=spec.output_model.__name__,
+                correlation_id=CORRELATION_ID,
+                telemetry=telemetry[spec.node_id],
+            )
+        ],
         callback_handler=None,
     )
 
@@ -124,27 +162,33 @@ class GraphRunResult:
     outputs: dict[str, BaseModel]
     timings: dict[str, int] = field(default_factory=dict)
     statuses: dict[str, NodeStatus] = field(default_factory=dict)
+    telemetry: dict[str, NodeTelemetry] = field(default_factory=dict)
     model_id: str = MODEL_ID_FIXTURE
     prompt_version: str = PROMPT_VERSION
 
 
 def build_graph(ctx: GraphContext, mode: str = "fixture"):
-    """Construct the bounded graph. Same shape in fixture and bedrock mode."""
+    """Construct the bounded graph. Same shape in fixture and bedrock mode.
+
+    Returns the graph and the per-node telemetry the hook chain will fill in.
+    """
+    registry = build_read_tools(ctx)
+    telemetry: dict[str, NodeTelemetry] = {}
     builder = GraphBuilder()
     builder.set_graph_id("cairn-compound-disruption-v1")
     for spec in (*SPECIALISTS, PLANNER):
-        builder.add_node(_agent(spec, ctx, mode), spec.node_id)
+        builder.add_node(_agent(spec, ctx, mode, registry, telemetry), spec.node_id)
     for spec in SPECIALISTS:
         builder.set_entry_point(spec.node_id)            # four specialists run in parallel
         builder.add_edge(spec.node_id, PLANNER.node_id)  # planner waits for all four
     builder.set_max_node_executions(MAX_NODE_EXECUTIONS)
     builder.set_execution_timeout(EXECUTION_TIMEOUT_SECONDS)
     builder.set_node_timeout(NODE_TIMEOUT_SECONDS)
-    return builder.build()
+    return builder.build(), telemetry
 
 
 async def run_graph(prompt: str, ctx: GraphContext, mode: str = "fixture") -> GraphRunResult:
-    graph = build_graph(ctx, mode)
+    graph, telemetry = build_graph(ctx, mode)
     started = time.perf_counter()
     result = await graph.invoke_async(prompt)
     elapsed_ms = int((time.perf_counter() - started) * 1000)
@@ -159,7 +203,9 @@ async def run_graph(prompt: str, ctx: GraphContext, mode: str = "fixture") -> Gr
             continue
         outputs[node_id] = structured
         statuses[node_id] = NodeStatus.COMPLETED
-        timings[node_id] = int(getattr(node_result, "execution_time", 0)) or max(elapsed_ms // 5, 1)
+        # Prefer the hook-measured duration; it is observed, not estimated.
+        measured = telemetry[node_id].duration_ms if node_id in telemetry else 0
+        timings[node_id] = measured or int(getattr(node_result, "execution_time", 0)) or max(elapsed_ms // 5, 1)
 
     for node_id in {s.node_id for s in (*SPECIALISTS, PLANNER)} - set(outputs):
         statuses[node_id] = NodeStatus.FAILED
@@ -168,5 +214,6 @@ async def run_graph(prompt: str, ctx: GraphContext, mode: str = "fixture") -> Gr
         outputs=outputs,
         timings=timings,
         statuses=statuses,
-        model_id=MODEL_ID_FIXTURE if mode == "fixture" else "bedrock",
+        telemetry=telemetry,
+        model_id=MODEL_ID_FIXTURE if mode == "fixture" else BEDROCK_MODEL_ID,
     )

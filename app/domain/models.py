@@ -417,6 +417,17 @@ class ApiError(Contract):
 # --------------------------------------------------------------- run / read model
 
 
+class ToolCallRecord(Contract):
+    """One tool invocation observed by the Strands hook chain."""
+
+    tool_name: str
+    status: str  # success | error | blocked
+    duration_ms: int = 0
+    response_hash: str = ""
+    blocked: bool = False
+    reason: str = ""
+
+
 class AgentNodeRun(Contract):
     node_id: str
     label: str
@@ -432,6 +443,8 @@ class AgentNodeRun(Contract):
     assumptions: list[str] = Field(default_factory=list)
     unknowns: list[str] = Field(default_factory=list)
     confidence: float | None = None
+    tool_calls: list[ToolCallRecord] = Field(default_factory=list)
+    allowed_tools: list[str] = Field(default_factory=list)
     # Deliberately no chain-of-thought field. Status, findings, evidence, uncertainty only.
 
 

@@ -203,6 +203,23 @@ class Run:
             node.unknowns = list(getattr(out, "unknowns", []))
             node.confidence = getattr(out, "confidence", None)
             node.findings = self._findings_for(out)
+
+            # Tool activity comes from the Strands hook chain, so the audit shows what the
+            # agent actually looked at rather than what it claimed to look at.
+            telemetry = result.telemetry.get(spec.node_id)
+            if telemetry is not None:
+                node.tool_calls = list(telemetry.tool_calls)
+                node.allowed_tools = list(telemetry.allowed_tools)
+                for call in telemetry.tool_calls:
+                    self.ledger.record(
+                        "TOOL_BLOCKED" if call.blocked else "TOOL_CALL",
+                        spec.node_id,
+                        call.reason or f"{call.tool_name} returned {call.status}",
+                        toolName=call.tool_name,
+                        status=call.status,
+                        durationMs=call.duration_ms,
+                        responseHash=call.response_hash or None,
+                    )
             self.ledger.record(
                 "AGENT_FINDING",
                 spec.node_id,
@@ -211,6 +228,7 @@ class Run:
                 confidence=node.confidence,
                 unknowns=node.unknowns,
                 promptVersion=PROMPT_VERSION,
+                toolCalls=[c.tool_name for c in node.tool_calls],
             )
 
         planner: ScenarioSet = result.outputs[PLANNER.node_id]

@@ -196,6 +196,9 @@ function renderAgents() {
       ${n.status === 'COMPLETED' ? `<div class="agent-sub">
         ${n.confidence != null ? `confidence ${n.confidence} · ` : ''}${n.evidenceIds.length} evidence${n.durationMs ? ` · ${n.durationMs}ms` : ''}
       </div>` : ''}
+      ${n.toolCalls?.length ? `<div class="agent-tools">
+        ${n.toolCalls.map((t) => `<span class="tool ${t.blocked ? 'blocked' : ''}" title="${t.blocked ? t.reason : `${t.status} · ${t.durationMs}ms · sha ${t.responseHash}`}">${t.blocked ? '⃠ ' : ''}${t.toolName}</span>`).join('')}
+      </div>` : ''}
       ${extras ? `<details><summary>evidence, assumptions, uncertainty</summary><ul>
         ${n.evidenceIds.length ? `<li><b>Evidence:</b> ${n.evidenceIds.join(', ')}</li>` : ''}${extras}
       </ul></details>` : ''}
