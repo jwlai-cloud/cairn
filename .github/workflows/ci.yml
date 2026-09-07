@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# The suite must never need cloud credentials. If it ever does, this job fails.
+env:
+  CAIRN_MODE: fixture
+
+jobs:
+  test:
+    name: tests (python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install ${{ matrix.python }}
+
+      - name: Install
+        run: |
+          uv venv --python ${{ matrix.python }}
+          uv pip install -e ".[dev]"
+
+      - name: Assert no AWS credentials are present
+        run: |
+          if [ -n "$AWS_ACCESS_KEY_ID" ] || [ -n "$AWS_PROFILE" ] || [ -d "$HOME/.aws" ]; then
+            echo "::error::AWS credentials are visible to the test job. The demo must run without them."
+            exit 1
+          fi
+          echo "no AWS credentials present, as required"
+
+      - name: Tests
+        run: uv run --no-project python -m pytest -q
+
+      - name: Safety suite must be green on its own
+        run: uv run --no-project python -m pytest tests/safety -q
+
+      - name: Deterministic replay must be stable across processes
+        run: |
+          A=$(uv run --no-project python -c "
+          import asyncio
+          from app.domain.run_service import Run
+          async def main():
+              r = Run(); r.inject_all_events(); await r.analyse()
+              print(r.replay_signature())
+          asyncio.run(main())" 2>/dev/null | tail -1)
+          B=$(uv run --no-project python -c "
+          import asyncio
+          from app.domain.run_service import Run
+          async def main():
+              r = Run(); r.inject_all_events(); await r.analyse()
+              print(r.replay_signature())
+          asyncio.run(main())" 2>/dev/null | tail -1)
+          echo "run A: $A"
+          echo "run B: $B"
+          if [ "$A" != "$B" ] || [ -z "$A" ]; then
+            echo "::error::replay signature is not stable across separate processes"
+            exit 1
+          fi
+
+  demo:
+    name: clean checkout starts the demo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: |
+          uv venv --python 3.12
+          uv pip install -e ".[dev]"
+
+      - name: Boot the situation room and walk the golden path over HTTP
+        run: |
+          uv run --no-project python -m uvicorn app.api.main:app --port 8000 &
+          for i in $(seq 1 40); do curl -sf http://127.0.0.1:8000/healthz >/dev/null && break; sleep 1; done
+
+          curl -sf http://127.0.0.1:8000/healthz | tee /dev/stderr | grep -q '"credentialsRequired":false'
+          curl -sf http://127.0.0.1:8000/ -o /dev/null
+          curl -sf -X POST http://127.0.0.1:8000/v1/events -o /dev/null
+          curl -sf -X POST http://127.0.0.1:8000/v1/runs/current/analyse -o /dev/null
+
+          echo "--- a prohibited action must be refused with 403 POLICY_DENIED ---"
+          CODE=$(curl -s -o /tmp/denied.json -w '%{http_code}' -X POST \
+            http://127.0.0.1:8000/v1/actions/prohibited \
+            -H 'content-type: application/json' \
+            -d '{"actionType":"OVERRIDE_SAFETY_INTERLOCK"}')
+          cat /tmp/denied.json
+          test "$CODE" = "403"
+          grep -q 'POLICY_DENIED' /tmp/denied.json
+
+          echo "--- an action before approval must also be refused ---"
+          curl -sf -X POST http://127.0.0.1:8000/v1/scenarios/scn_recover_tonnes/select -o /dev/null
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8000/v1/actions)
+          test "$CODE" = "403"
