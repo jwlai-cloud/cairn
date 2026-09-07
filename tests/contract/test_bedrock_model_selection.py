@@ -106,3 +106,46 @@ def test_the_three_models_adr_004_selects_are_all_ranked():
 def test_the_fallback_is_a_currently_valid_id():
     """The fallback fires when listing is denied; a stale id would fail confusingly."""
     assert bm.FALLBACK_MODEL_ID == "us.anthropic.claude-sonnet-5"
+
+
+async def test_the_model_is_resolved_once_per_graph_not_once_per_node(monkeypatch):
+    """Per-node resolution could give nodes different models and misreport the run."""
+    import app.agents.graph as graph_module
+    from app.agents.context import GraphContext
+    from app.integrations.fixture_source import FixtureSource
+
+    calls: list[str] = []
+    original = graph_module.resolve_model_id_for
+
+    def counted(mode: str) -> str:
+        calls.append(mode)
+        return original(mode)
+
+    monkeypatch.setattr(graph_module, "resolve_model_id_for", counted)
+
+    source = FixtureSource()
+    ctx = GraphContext(
+        tuple(source.events()), tuple(source.evidence()), source.site_model(), source.baseline_kpi()
+    )
+    result = await graph_module.run_graph("x", ctx)
+
+    assert len(calls) == 1, f"resolved {len(calls)} times for a five-node graph"
+    assert result.model_id == original("fixture")
+
+
+async def test_an_explicit_model_id_is_used_without_resolving_at_all(monkeypatch):
+    """The run service names the model in the audit first, then passes it down."""
+    import app.agents.graph as graph_module
+    from app.agents.context import GraphContext
+    from app.integrations.fixture_source import FixtureSource
+
+    def explode(_mode: str) -> str:
+        raise AssertionError("must not resolve when the caller supplied a model id")
+
+    monkeypatch.setattr(graph_module, "resolve_model_id_for", explode)
+    source = FixtureSource()
+    ctx = GraphContext(
+        tuple(source.events()), tuple(source.evidence()), source.site_model(), source.baseline_kpi()
+    )
+    result = await graph_module.run_graph("x", ctx, model_id="pinned-for-this-run")
+    assert result.model_id == "pinned-for-this-run"

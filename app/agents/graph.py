@@ -129,20 +129,16 @@ def _reducer_for(spec: NodeSpec, ctx: GraphContext):
     return plan
 
 
-def _model_for(spec: NodeSpec, ctx: GraphContext, mode: str):
+def _model_for(spec: NodeSpec, ctx: GraphContext, mode: str, model_id: str):
     if mode == "bedrock":  # pragma: no cover - requires AWS credentials, not exercised in CI
         from strands.models import BedrockModel
 
         from app.config import settings
 
-        from app.agents.bedrock_models import resolve_model_id
-
         kwargs = {"region_name": settings.BEDROCK_REGION} if settings.BEDROCK_REGION else {}
-        return BedrockModel(
-            model_id=resolve_model_id(settings.BEDROCK_REGION, settings.BEDROCK_MODEL_ID),
-            temperature=0.0,
-            **kwargs,
-        )
+        # model_id is resolved once per graph, never per node: resolving per node could
+        # give different nodes different models, and would report one that did not run.
+        return BedrockModel(model_id=model_id, temperature=0.0, **kwargs)
     requires = () if spec.node_id != PLANNER.node_id else tuple(s.node_id for s in SPECIALISTS)
     return FixtureModel(
         _reducer_for(spec, ctx),
@@ -154,12 +150,17 @@ def _model_for(spec: NodeSpec, ctx: GraphContext, mode: str):
 
 
 def _agent(
-    spec: NodeSpec, ctx: GraphContext, mode: str, registry: dict, telemetry: dict[str, NodeTelemetry]
+    spec: NodeSpec,
+    ctx: GraphContext,
+    mode: str,
+    model_id: str,
+    registry: dict,
+    telemetry: dict[str, NodeTelemetry],
 ) -> Agent:
     allowed = NODE_TOOLS.get(spec.node_id, ())
     telemetry[spec.node_id] = NodeTelemetry(node_id=spec.node_id, allowed_tools=allowed)
     return Agent(
-        model=_model_for(spec, ctx, mode),
+        model=_model_for(spec, ctx, mode, model_id),
         name=spec.node_id,
         description=spec.role,
         system_prompt=load_prompt(spec),
@@ -189,28 +190,33 @@ class GraphRunResult:
     prompt_version: str = PROMPT_VERSION
 
 
-def build_graph(ctx: GraphContext, mode: str = "fixture"):
+def build_graph(ctx: GraphContext, mode: str = "fixture", model_id: str | None = None):
     """Construct the bounded graph. Same shape in fixture and bedrock mode.
 
-    Returns the graph and the per-node telemetry the hook chain will fill in.
+    Returns the graph, the per-node telemetry the hook chain will fill in, and the
+    model id every node was built with - resolved once here so the whole graph, the
+    audit entry and any cost estimate all name the same model.
     """
+    model_id = model_id or resolve_model_id_for(mode)
     registry = build_read_tools(ctx)
     telemetry: dict[str, NodeTelemetry] = {}
     builder = GraphBuilder()
     builder.set_graph_id("cairn-compound-disruption-v1")
     for spec in (*SPECIALISTS, PLANNER):
-        builder.add_node(_agent(spec, ctx, mode, registry, telemetry), spec.node_id)
+        builder.add_node(_agent(spec, ctx, mode, model_id, registry, telemetry), spec.node_id)
     for spec in SPECIALISTS:
         builder.set_entry_point(spec.node_id)            # four specialists run in parallel
         builder.add_edge(spec.node_id, PLANNER.node_id)  # planner waits for all four
     builder.set_max_node_executions(MAX_NODE_EXECUTIONS)
     builder.set_execution_timeout(EXECUTION_TIMEOUT_SECONDS)
     builder.set_node_timeout(NODE_TIMEOUT_SECONDS)
-    return builder.build(), telemetry
+    return builder.build(), telemetry, model_id
 
 
-async def run_graph(prompt: str, ctx: GraphContext, mode: str = "fixture") -> GraphRunResult:
-    graph, telemetry = build_graph(ctx, mode)
+async def run_graph(
+    prompt: str, ctx: GraphContext, mode: str = "fixture", model_id: str | None = None
+) -> GraphRunResult:
+    graph, telemetry, resolved_model_id = build_graph(ctx, mode, model_id)
     started = time.perf_counter()
     result = await graph.invoke_async(prompt)
     elapsed_ms = int((time.perf_counter() - started) * 1000)
@@ -246,5 +252,5 @@ async def run_graph(prompt: str, ctx: GraphContext, mode: str = "fixture") -> Gr
         statuses=statuses,
         telemetry=telemetry,
         usage=usage,
-        model_id=resolve_model_id_for(mode),
+        model_id=resolved_model_id,
     )
