@@ -126,7 +126,7 @@ Times are cumulative. Narration is what gets said; Screen is what the capture mu
 >
 > Here is what that actually means. An HSE authority asks one question — *can this thing waive a safety control?* In the Phase A stakeholder matrix that becomes a recorded concern. In the Preliminary phase it becomes principle PR-05: no direct control path to operational technology. In the requirements specification it becomes AR-05: deny every tier four action, for every role. In Phase E it becomes solution building block SBB-04, the deterministic policy service. And it lands in one file, `app/policy/decisions.py`, with a test that fails the build if a model is ever consulted.
 >
-> One question, five artefacts, one test. That chain exists for every requirement — fifteen of them, each with the test id that proves it in the compliance table.
+> One question, five artefacts, one test. That chain exists for every requirement, seventeen of them, each with the test id that proves it in the compliance table.
 >
 > And the method paid for itself. Phase G compliance review is where I found a shift target that was a quarter of what that fleet actually moves. Requirements traceability is where I found a decision rail decorated with invented survey elevations, in a system whose entire claim is that it does not invent numbers. An evaluation case is where I found an agent graph whose nodes were not reading each other at all.
 >

@@ -81,7 +81,7 @@ unspoken, or leave it out entirely?
 > target did not line up with the fleet capacity we had declared. We corrected it before
 > it became a misleading demo.
 
-**Must assert:** fifteen requirements, each with the test that proves it, so the single
+**Must assert:** seventeen requirements, each with the test that proves it, so the single
 traced example in Part B is visibly one row of many.
 
 **Problem to solve in review:** the narration on this beat is about the caught

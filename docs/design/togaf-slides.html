@@ -1,0 +1,234 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CAIRN · TOGAF slides</title>
+<!--
+  Three frames for Act 4 of the demo, built to the app's own tokens so they read as the
+  same product rather than a deck bolted on afterwards.
+
+  Every identifier on these slides resolves to a real artefact in the repo. Nothing here
+  is illustrative. The reveal timings match the narration clause boundaries in
+  captures/narration.md, so each link lands as it is spoken.
+
+  Drive it with captures/capture-slides.mjs. Slide is chosen by hash: #a, #b, #c.
+-->
+<style>
+@font-face{font-family:'IBM Plex Sans';font-weight:400;font-display:block;src:url('../../app/web/vendor/fonts/ibm-plex-sans-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:'IBM Plex Sans';font-weight:600;font-display:block;src:url('../../app/web/vendor/fonts/ibm-plex-sans-latin-600-normal.woff2') format('woff2')}
+@font-face{font-family:'IBM Plex Sans Condensed';font-weight:700;font-display:block;src:url('../../app/web/vendor/fonts/ibm-plex-sans-condensed-latin-700-normal.woff2') format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-weight:400;font-display:block;src:url('../../app/web/vendor/fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-weight:600;font-display:block;src:url('../../app/web/vendor/fonts/ibm-plex-mono-latin-600-normal.woff2') format('woff2')}
+
+:root{
+  --ground:#DEDACF; --plate:#EFEBE1; --raise:#F7F4EC; --sink:#D2CDC1;
+  --rule:#BFB8A8; --rule-hi:#9A9384;
+  --ink:#20242B; --ink-dim:#5C6068; --ink-faint:#8A8B87;
+  --haematite:#B32E0C; --hivis:#9A6A00; --malachite:#0F7A52; --survey:#255E96; --violet:#5B49A8;
+  --ok-bg:#D9EFE4; --ok-line:#78BFA0; --hot-bg:#F6DED6; --hot-line:#D89880;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;
+  --cond:'IBM Plex Sans Condensed','IBM Plex Sans',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --chamfer:polygon(0 8px,8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%);
+}
+*{box-sizing:border-box;margin:0}
+body{width:1280px;height:800px;overflow:hidden;background:var(--ground);color:var(--ink);
+  font-family:var(--sans);font-size:15px;display:grid;place-items:center}
+.slide{display:none;width:1280px;height:800px;padding:44px 56px;flex-direction:column}
+body:not([data-slide]) .slide#a,
+body[data-slide='a'] .slide#a,
+body[data-slide='b'] .slide#b,
+body[data-slide='c'] .slide#c{display:flex}
+
+.head{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--rule);padding-bottom:12px}
+.head b{font-family:var(--cond);font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--haematite)}
+.head span{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.08em}
+h1{font-family:var(--cond);font-size:34px;font-weight:700;letter-spacing:-.01em;margin:22px 0 6px}
+.sub{color:var(--ink-dim);font-size:16px;max-width:74ch}
+
+/* ---------------------------------------------------------------- slide A: the ADM */
+.adm{flex:1;display:grid;grid-template-columns:430px 1fr;gap:52px;align-items:center;margin-top:4px}
+.wheel{position:relative;width:430px;height:430px}
+.wheel .ring{position:absolute;inset:0;border-radius:50%;border:1px solid var(--rule)}
+.wheel .hub{position:absolute;inset:33%;border-radius:50%;background:var(--raise);
+  border:1px solid var(--rule-hi);display:grid;place-items:center;text-align:center;padding:10px}
+.wheel .hub u{font-family:var(--cond);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-dim);text-decoration:none;line-height:1.35}
+.ph{position:absolute;width:88px;height:88px;margin:-44px 0 0 -44px;border-radius:50%;
+  background:var(--plate);border:1px solid var(--rule);display:grid;place-items:center;text-align:center}
+.ph b{font-family:var(--cond);font-size:19px;font-weight:700;line-height:1}
+.ph i{font-family:var(--mono);font-size:8.5px;font-style:normal;color:var(--ink-faint);
+  letter-spacing:.04em;display:block;margin-top:3px;max-width:74px}
+.ph.on{background:var(--ok-bg);border-color:var(--ok-line)}
+.ph.on b{color:var(--malachite)}
+.ph.off{opacity:.42;border-style:dashed}
+
+.moves{display:flex;flex-direction:column;gap:0}
+.mv{display:grid;grid-template-columns:32px 1fr;gap:16px;padding:19px 0;border-bottom:1px dashed var(--rule)}
+.mv:last-child{border-bottom:0}
+.mv u{font-family:var(--mono);font-size:12px;color:var(--haematite);text-decoration:none;padding-top:3px}
+.mv b{font-family:var(--cond);font-size:19px;letter-spacing:.01em}
+.mv span{display:block;color:var(--ink-dim);font-size:14.5px;margin-top:3px}
+.mv code{font-family:var(--mono);font-size:11.5px;color:var(--survey)}
+
+/* ------------------------------------------------------------- slide B: the chain */
+.chain{flex:1;display:flex;flex-direction:column;justify-content:center;gap:0}
+.lk{display:grid;grid-template-columns:158px 1fr 254px;gap:20px;align-items:center;
+  padding:21px 20px;background:var(--plate);border:1px solid var(--rule);clip-path:var(--chamfer);
+  opacity:0;transform:translateX(-14px);transition:opacity .5s ease,transform .5s ease}
+.lk.show{opacity:1;transform:none}
+.lk + .arrow{height:26px;margin-left:80px;border-left:2px solid var(--rule-hi);opacity:0;
+  transition:opacity .4s ease;position:relative}
+.lk + .arrow::after{content:'';position:absolute;left:-5px;bottom:-1px;
+  border-left:6px solid transparent;border-right:6px solid transparent;border-top:7px solid var(--rule-hi)}
+.lk + .arrow.show{opacity:1}
+.lk u{font-family:var(--cond);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-faint);text-decoration:none}
+.lk b{font-family:var(--sans);font-weight:600;font-size:18px;display:block;margin-top:4px}
+.lk .id{font-family:var(--mono);font-size:12px;color:var(--survey);text-align:right}
+.lk.q{background:var(--raise);border-color:var(--rule-hi)}
+.lk.q b{font-style:italic}
+.lk.t{background:var(--ok-bg);border-color:var(--ok-line)}
+.lk.t .id{color:var(--malachite)}
+.lk.t b::before{content:'✓ ';color:var(--malachite)}
+
+/* --------------------------------------------------- slide C: the caught mistake */
+.split{flex:1;display:grid;grid-template-columns:1fr 408px;gap:44px;margin-top:12px;min-height:0}
+.reqs{display:flex;flex-direction:column;min-height:0}
+.reqs .cap{font-family:var(--cond);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-faint);margin-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font-family:var(--cond);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-faint);text-align:left;padding:0 8px 5px 0;border-bottom:1px solid var(--rule)}
+td{padding:7px 8px 7px 0;border-bottom:1px solid rgba(191,184,168,.42);vertical-align:top}
+td.k{font-family:var(--mono);color:var(--haematite);white-space:nowrap}
+td.v{font-family:var(--mono);font-size:12px;color:var(--malachite);white-space:nowrap}
+tr.hi td{background:var(--ok-bg)}
+.fix{display:flex;flex-direction:column;gap:14px;align-self:start}
+.fix .cap{font-family:var(--cond);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+.box{padding:16px 18px;border:1px solid var(--rule);background:var(--plate);clip-path:var(--chamfer)}
+.box.bad{background:var(--hot-bg);border-color:var(--hot-line)}
+.box.good{background:var(--ok-bg);border-color:var(--ok-line)}
+.box u{font-family:var(--cond);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-dim);text-decoration:none;display:block;margin-bottom:6px}
+.box .n{font-family:var(--cond);font-size:31px;font-weight:700;line-height:1.05}
+.box.bad .n{color:var(--haematite);text-decoration:line-through;text-decoration-thickness:2px}
+.box.good .n{color:var(--malachite)}
+.box p{font-size:12.5px;color:var(--ink-dim);margin-top:6px;line-height:1.45}
+
+.foot{border-top:1px solid var(--rule);padding-top:10px;margin-top:14px;display:flex;
+  justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)}
+</style>
+
+<!-- ============================================================= A · the method -->
+<section class="slide" id="a">
+  <div class="head"><b>Method</b><span>TOGAF ADM · increment 0 · one narrow pass</span></div>
+  <h1>Concerns become tests, not slideware</h1>
+  <p class="sub">One capability, one increment, one architecture contract. Phases that ran
+    are solid; the rest are declared unrun rather than implied.</p>
+  <div class="adm">
+    <div class="wheel">
+      <div class="ring"></div>
+      <div class="hub"><u>Requirements<br>Management<br>· continuous ·</u></div>
+      <div class="ph on" id="pP"><b>P</b><i>principles</i></div>
+      <div class="ph on" id="pA"><b>A</b><i>vision</i></div>
+      <div class="ph on" id="pB"><b>B</b><i>business</i></div>
+      <div class="ph on" id="pC"><b>C</b><i>data · apps</i></div>
+      <div class="ph on" id="pD"><b>D</b><i>technology</i></div>
+      <div class="ph on" id="pE"><b>E</b><i>solutions</i></div>
+      <div class="ph on" id="pF"><b>F</b><i>migration</i></div>
+      <div class="ph on" id="pG"><b>G</b><i>governance</i></div>
+      <div class="ph off" id="pH"><b>H</b><i>change mgmt</i></div>
+    </div>
+    <div class="moves">
+      <div class="mv"><u>01</u><div><b>A stakeholder raises a concern</b>
+        <span>Recorded in the stakeholder matrix, with the authority who raised it.</span></div></div>
+      <div class="mv"><u>02</u><div><b>It becomes a principle</b>
+        <span>Binding on every later decision. <code>PR-01 … PR-06</code></span></div></div>
+      <div class="mv"><u>03</u><div><b>It becomes a requirement</b>
+        <span>Typed, prioritised, and verifiable. <code>AR-01 … AR-17</code></span></div></div>
+      <div class="mv"><u>04</u><div><b>It becomes a building block</b>
+        <span>One component owns it. <code>SBB-01 … SBB-08</code></span></div></div>
+      <div class="mv"><u>05</u><div><b>It becomes a test that can fail the build</b>
+        <span>Not a promise. A gate.</span></div></div>
+    </div>
+  </div>
+  <div class="foot"><span>docs/architecture/09-togaf-adm-artefacts.md</span>
+    <span>Phase H not run: no post-increment change cycle exists yet</span></div>
+</section>
+
+<!-- ========================================================== B · the traced chain -->
+<section class="slide" id="b">
+  <div class="head"><b>Traceability</b><span>one concern, carried to a passing test</span></div>
+  <h1>One question, five artefacts, one test</h1>
+  <div class="chain">
+    <div class="lk q" data-step="1"><u>Stakeholder concern</u><b>"Can this thing waive a safety control?"</b><span class="id">HSE authority · §9.3</span></div>
+    <div class="arrow" data-step="2"></div>
+    <div class="lk" data-step="2"><u>Principle</u><b>No direct control path to operational technology</b><span class="id">PR-05 · §9.2</span></div>
+    <div class="arrow" data-step="3"></div>
+    <div class="lk" data-step="3"><u>Requirement</u><b>Deny every Tier 4 action, for every role, with no model call</b><span class="id">AR-05 · §9.12</span></div>
+    <div class="arrow" data-step="4"></div>
+    <div class="lk" data-step="4"><u>Building block</u><b>Deterministic policy service</b><span class="id">SBB-04 · app/policy/decisions.py</span></div>
+    <div class="arrow" data-step="5"></div>
+    <div class="lk t" data-step="5"><u>Verification</u><b>test_tier_four_is_denied_for_every_role</b><span class="id">passing · fails the build if a model is called</span></div>
+  </div>
+  <div class="foot"><span>Every identifier resolves to a real artefact in this repository.</span>
+    <span>Same chain for all 17 requirements</span></div>
+</section>
+
+<!-- ======================================================= C · the caught mistake -->
+<section class="slide" id="c">
+  <div class="head"><b>Governance</b><span>Phase G compliance review · what the method caught</span></div>
+  <h1>The review changed the build</h1>
+  <div class="split">
+    <div class="reqs">
+      <div class="cap">Architecture requirements · every row carries the test that proves it</div>
+      <table>
+        <tr><th>ID</th><th>Requirement</th><th>Verification</th></tr>
+        <tr><td class="k">AR-01</td><td>Correlate ≥4 signals into one incident</td><td class="v">test_five_signals…</td></tr>
+        <tr><td class="k">AR-02</td><td>≥3 options differing in what they trade</td><td class="v">test_options_are…</td></tr>
+        <tr><td class="k">AR-04</td><td>No option trades a standing safety control</td><td class="v">test_every_option…</td></tr>
+        <tr class="hi"><td class="k">AR-05</td><td>Deny every Tier 4 action, every role, no model call</td><td class="v">test_tier_four_is…</td></tr>
+        <tr><td class="k">AR-06</td><td>Refuse a state change without valid approval</td><td class="v">test_approval.py</td></tr>
+        <tr><td class="k">AR-07</td><td>Replay a duplicate without a second effect</td><td class="v">test_duplicate…</td></tr>
+        <tr><td class="k">AR-08</td><td>Surface stale and conflicting evidence</td><td class="v">test_evidence.py</td></tr>
+        <tr><td class="k">AR-10</td><td>Reconstruct the chain from event to outcome</td><td class="v">test_audit…</td></tr>
+        <tr><td class="k">AR-13</td><td>Never display raw chain-of-thought</td><td class="v">test_no_chain_of…</td></tr>
+        <tr><td class="k">AR-16</td><td>Every specialist gathers evidence via a tool</td><td class="v">test_every_special…</td></tr>
+        <tr><td class="k">AR-17</td><td>A tool outside a node's allow-list is cancelled</td><td class="v">test_a_tool_outside…</td></tr>
+      </table>
+      <div class="cap" style="margin-top:9px">11 of 17 shown</div>
+    </div>
+    <div class="fix">
+      <div class="cap">Caught in review, not by a test</div>
+      <div class="box bad"><u>Shift target, as first written</u><div class="n">12,000 t</div>
+        <p>A quarter of what the declared fleet and crusher could move in a twelve-hour shift.</p></div>
+      <div class="box good"><u>Corrected against declared capacity</u><div class="n">28,000 t</div>
+        <p>Crusher-limited, with 16,900 t moved at the eight-hour mark. Internally consistent.</p></div>
+      <div class="box"><u>Why it matters</u>
+        <p>A system whose claim is that it does not invent numbers cannot afford a headline
+          figure that contradicts its own fixture. Asking formally whether the build matched
+          the design is what surfaced it.</p></div>
+    </div>
+  </div>
+  <div class="foot"><span>Figures are synthetic and internally consistent. No real operation is described.</span>
+    <span>docs/architecture/09-togaf-adm-artefacts.md §9.10</span></div>
+</section>
+
+<script>
+// Lay the eight phases plus Preliminary around the ring.
+const R = 179, C = 215;
+[['pP',-90],['pA',-50],['pB',-10],['pC',30],['pD',70],['pE',110],['pF',150],['pG',190],['pH',230]]
+  .forEach(([id, deg]) => {
+    const r = deg * Math.PI / 180, el = document.getElementById(id);
+    if (el) { el.style.left = (C + R * Math.cos(r)) + 'px'; el.style.top = (C + R * Math.sin(r)) + 'px'; }
+  });
+
+// Slide B reveals one link per narration clause. Held here so the capture can step it.
+window.revealStep = (n) => document.querySelectorAll(`#b [data-step="${n}"]`)
+  .forEach((el) => el.classList.add('show'));
+window.revealAll = () => { for (let i = 1; i <= 5; i++) window.revealStep(i); };
+// Select from the hash, and keep following it. Navigating to a different hash on the
+// same document does not re-run this script, which silently left the first slide up.
+const pick = () => { document.body.dataset.slide = (location.hash.slice(1) || 'a'); };
+addEventListener('hashchange', pick);
+pick();
+</script>
