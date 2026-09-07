@@ -31,3 +31,10 @@ captures/frames/
 *.mp4
 *.mov
 node_modules/
+
+# Third-party agent skills, installed by `npx skills add` into the repo because those
+# packages refuse a global install. They are prompt files that run with full agent
+# permissions, and they are not part of this project.
+.agents/
+.claude/skills/
+skills-lock.json

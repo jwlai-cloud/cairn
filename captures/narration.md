@@ -2,87 +2,114 @@
 
 Runtime **4:48** against a 5:00 cap.
 
-## Why it is structured this way
+## The arc, and why this one
 
-The left-hand column of the UI is the decision loop, and it is on screen from the first
-frame. It lists eight stages. Five are where a language model does the thinking. Three
-carry the words `no model`, because the model is not permitted near them.
+Story carries emotional truth. Story is not evidence. Use story to make people care, and
+use evidence to make them right.
 
-That split is the product's entire argument, drawn in the interface before anyone says a
-word. So the script introduces the column early and then walks it in order: the five
-model stages, then the three that refuse. Every later beat has a place in that structure
-instead of being another feature in a list.
+Two earlier drafts had that backwards. They opened on systems rather than people, and
+tried to make the audience care by proving correctness at them. Counting the words showed
+it plainly. Across 694 spoken words, `supervisor` appeared twice, and `crew`, `operator`
+and `someone` never appeared at all. Nobody was in the story, and no line said what the
+thing was worth. An outside reviewer called it an engineer defending an implementation.
+That was fair.
 
-An earlier version of this sheet opened with seventy-eight words of scene-setting, named
-the product at 0:26, mentioned Strands once in passing, and delivered TOGAF as
-`PR-05 → AR-05 → SBB-04` in the last twenty seconds. It answered none of the four
-questions a judge actually has: what is this for, what is the edge, why Strands, and what
-did TOGAF change.
+The shape is now:
+
+| Act | Beat | Job |
+|---|---|---|
+| 1 | A supervisor, four screens, forty-two minutes | Make someone care |
+| 2 | The decision, made visible | Show it working, and say why Strands |
+| 3 | The three stages that refuse | Earn trust with evidence |
+| 4 | Why it is built this way | Argue the value to a business |
+| Close | Numbers, then the thesis | Land the differentiator |
+
+Act 1 is a protagonist arc. Act 4 is the value argument, which no earlier draft had at
+all. Evidence still carries Acts 3 and 4, but it now earns trust instead of defending a
+design.
+
+The left column of the interface is on screen from the first frame. It lists eight
+stages: five where a model thinks, three marked `no model`. That split is the product's
+whole claim, already drawn in the interface. Act 1 introduces it, and the rest of the
+script walks it in order.
+
+## Craft rules applied
+
+- Replace an em dash with a new sentence. Use periods, not semicolons.
+- Say who does what. "Policy escalates it", not "the action is escalated".
+- One thought per sentence. Split anything over about 25 words.
+- Cut every word that does no work.
+- Be specific rather than sterile. "Truck 204's telemetry is fifteen minutes old", not
+  "data quality is surfaced".
+- Vary sentence length on purpose. A short sentence lands a point. A longer one carries a
+  fact together with its condition.
+- No idioms and no metaphors. A judge may not be a native speaker.
+- Do not manufacture tension. The forty-two minutes is in the fixture. Stakes are real or
+  they go unstated.
 
 ## How to read the table
 
 `Screen` is what the capture must show. `Highlight` names the element a capture-only
-overlay must ring, dimming the rest of the page - the video has to point at the thing
-being talked about, not hope the viewer finds it.
+overlay must ring while dimming the rest of the page. The video has to point at whatever
+is being discussed.
 
-Word budgets assume 2.5 words per second, a measured control-room pace. If a line runs
-long, cut the sentence rather than talking faster; `narrate.py` reports every overrun
-against its beat.
+Budgets assume about 2.5 words per second. `narrate.py` reports any line that overruns
+its beat. When one does, cut a sentence rather than speaking faster.
 
-## Act 1 - what it is, and the edge
-
-| Cue | Hold | Screen | Highlight | Narration |
-|---|---|---|---|---|
-| 0:00 | 16s | Normal shift, trucks running their routes | — | This is CAIRN, a decision fabric for an open-pit iron ore mine. Its job is to take several things going wrong at once, work out that they are one problem, and put costed recovery options in front of a supervisor. |
-| 0:16 | 14s | Slow drift across the pit | — | This is the shift it is built for. Eight hours into twelve. The crusher is down to seventy-five per cent. A haul truck has stopped. Rain closes the main ramp in forty-two minutes. |
-| 0:30 | 10s | Timeline strip, four source systems | `#timeline` | Four separate systems each know one of those facts. Not one of them knows they are the same problem. That gap is the product. |
-| 0:40 | 16s | The decision loop at rest | `.spine` | Before anything happens, look at the left-hand column. That is the decision loop, and it is the whole design in one glance. Five stages where a model thinks. Three that say `no model`, because it is not allowed near them. |
-
-## Act 2 - the five model stages, and why Strands
+## Act 1 - a supervisor, four screens, forty-two minutes
 
 | Cue | Hold | Screen | Highlight | Narration |
 |---|---|---|---|---|
-| 0:56 | 10s | Inject all, then Run analysis | `#timeline` | Five signals arrive from four source systems. CAIRN correlates them into a single incident with a forty-two minute decision window. |
-| 1:06 | 18s | Specialists complete, spine fills | `.spine` | The thinking runs as a Strands graph. Four specialists execute in parallel - operations, reliability, risk and options - and you are watching that graph fill as each one finishes. Strands earns its place for two reasons, and both are on screen. |
-| 1:24 | 16s | Push in on the per-node timings | `.spine .lvl u` | First, it bounds the work. A fixed node budget, a hard per-node timeout, and no path that can loop forever. Every stage reports the milliseconds it actually took, so the cost of a decision is measured rather than estimated. |
-| 1:40 | 20s | Agent cards, tool chips, evidence counts | `#agentList` | Second, the edges carry typed results, not text. The risk specialist's finding reaches the planner as structured data with evidence ids attached. That is testable: remove a hazard and the plan changes. An evaluation case proves it, because an earlier version of this graph looked right and was not reading its edges at all. |
+| 0:00 | 14s | Normal shift, trucks running their routes | - | Eight hours into a twelve-hour shift, a supervisor at an open-pit iron ore mine has four screens and one decision to make. Rain closes the main haul ramp in forty-two minutes. |
+| 0:14 | 16s | Slow drift across the pit, KPI strip legible | `#kpiStrip` | Every screen is right. Plant control says the crusher is down to seventy-five per cent. Fleet says a truck has stopped on the ramp. Maintenance says the only crew is committed until ten past four. |
+| 0:30 | 14s | Timeline strip, four source systems | `#timeline` | No screen says those are one problem. Working that out is the supervisor's job. CAIRN does it instead, and it is built on a rule most agents break. It recommends. It never authorises. |
+| 0:44 | 14s | The decision loop at rest | `.spine` | That rule is drawn in the left column. Eight stages. Five where a model thinks. Three that say `no model`, because a model is not allowed to decide them. |
+
+## Act 2 - the decision, made visible
+
+| Cue | Hold | Screen | Highlight | Narration |
+|---|---|---|---|---|
+| 0:58 | 10s | Inject all, then Run analysis | `#timeline` | Five signals arrive from four source systems. CAIRN correlates them into one incident and starts a forty-two minute clock. |
+| 1:08 | 18s | Specialists complete, spine fills | `.spine` | The thinking runs as a Strands graph. Four specialists work at once on operations, reliability, risk and options. Strands is here for two reasons, and you can watch both rather than take them on trust. |
+| 1:26 | 16s | Push in on the per-node timings | `.spine .lvl u` | First, it bounds the work. A fixed node budget. A hard timeout on every node. No path that can loop forever. Each stage reports the milliseconds it took, so a decision has a measured cost. |
+| 1:42 | 22s | Agent cards, tool chips, evidence counts | `#agentList` | Second, the graph carries typed results along its edges instead of pasted text. The risk specialist's finding reaches the planner as structured data with evidence ids attached. Remove a hazard from the input and the plan changes. An evaluation case proves that, because an earlier version of this graph looked right and never read its own edges. |
 
 ## Act 3 - the three stages that refuse
 
 | Cue | Hold | Screen | Highlight | Narration |
 |---|---|---|---|---|
-| 2:00 | 12s | STALE and CONFLICT flags | `#evidenceList` | It does not tidy up bad inputs either. Truck 204's telemetry is fifteen minutes stale, and is marked stale. Two weather sources disagree by thirteen minutes, and both are kept. |
-| 2:12 | 12s | Three cards, land on Recover tonnes | `#scenarioCards` | Three options, trading different things away. Recover tonnes returns the most. All three respect the ramp closure, because that is a standing geotechnical control no option may trade. |
-| 2:24 | 24s | Attempt interlock override, hold the toast | `#toast` + `Policy` row | Now the first stage that refuses. Policy. Watch what happens when it is asked to do something it must never do. Denied. Rule T4-prohibited-interlock, tier four, decided by a deterministic policy table with no model call at all. No prompt gets past this, because the model is not in the path. A test fails the build if one is ever consulted. |
-| 2:48 | 14s | Request approval, then approve | `#toast` | The second is Act, and nothing reaches it without a person. Policy escalates to a named role. The supervisor approves, and the token is scoped to those assets, bound to that plan version, expiring, single-use. |
-| 3:02 | 10s | Simulate dispatch timeout | `#toast` | Then the world misbehaves. Dispatch times out after the call may already have applied. |
-| 3:12 | 8s | Blind retry refused | `#toast` | A retry is refused. CAIRN cannot prove the first call did not land, so it will not send a second. |
-| 3:20 | 10s | Reconcile outcome | `Verify` row | The third is Verify. Only an authoritative confirmation closes it. Unknown, then reconciling, then succeeded. |
+| 2:04 | 12s | STALE and CONFLICT flags | `#evidenceList` | It does not tidy up bad inputs. Truck 204's telemetry is fifteen minutes old, and it says so. Two weather sources disagree by thirteen minutes, and it keeps both. |
+| 2:16 | 12s | Three cards, land on Recover tonnes | `#scenarioCards` | Three options, each giving up something different. Recover tonnes returns the most. All three keep the ramp closed. That closure is a geotechnical control, and no option may trade it. |
+| 2:28 | 24s | Attempt interlock override, hold the toast | `#toast` and `Policy` row | Now the first stage that refuses. Ask CAIRN to override a safety interlock. Denied. Tier four, rule T4 prohibited interlock, decided by a policy table with no model call at all. No prompt gets past this, because no model is in the path. A test fails the build if one ever is. |
+| 2:52 | 14s | Request approval, then approve | `#toast` | The second refusing stage is Act. Nothing reaches it without a person. Policy escalates to a named role, the supervisor approves, and the token comes back scoped, expiring and single-use. |
+| 3:06 | 10s | Simulate dispatch timeout | `#toast` | Then the world misbehaves. Dispatch times out after the call may already have applied. CAIRN holds the outcome as unknown. |
+| 3:16 | 10s | Blind retry refused | `#toast` | Ask it to retry and it refuses. It cannot prove the first call failed, so it will not risk sending a second. |
+| 3:26 |  8s | Reconcile outcome | `Verify` row | The third refusing stage is Verify. Only an authoritative confirmation closes an unknown outcome. |
 
-## Act 4 - what TOGAF actually changed
+## Act 4 - why it is built this way
 
 | Cue | Hold | Screen | Highlight | Narration |
 |---|---|---|---|---|
-| 3:30 | 14s | ADM phase wheel, phases A to H | — | CAIRN was designed as a TOGAF ADM cycle, and the reason that matters is traceability. Every requirement can be followed from the person who raised it to the test that proves it. |
-| 3:44 | 30s | Animate the chain, one link per clause | each link in turn | Take one question. A safety authority asks whether this system can waive a safety control. In the stakeholder matrix that becomes a recorded concern. In the principles it becomes: no direct control path to operational technology. In the requirements it becomes: deny every tier four action, for every role. In the architecture it becomes a single building block, the policy service. And it lands in one file, with one test that fails the build if a model is ever consulted. |
-| 4:14 | 16s | Requirements table, test-id column | test-id column | One question, five artefacts, one test, and that chain exists for all fifteen requirements. The method also earned its keep. The compliance review is where I found a shift target a quarter of what that fleet actually moves. |
+| 3:34 | 16s | ADM phase wheel, phases A to H | - | A mine will not wire an agent into its operations because a demo went well. It needs to know that every safety rule has a home and a test. That is why CAIRN was designed as a TOGAF ADM cycle. |
+| 3:50 | 26s | Animate the chain, one link per clause | each link in turn | One question runs the whole way through it. A safety authority asks whether this system can waive a safety control. The stakeholder matrix records that as a concern. The principles answer it: no direct control path to operational technology. The requirements answer it: deny every tier four action, for every role. The architecture answers it with one building block, the policy service. And it ends in one file, with one test. |
+| 4:16 | 12s | Requirements table, test-id column | test-id column | One question, five artefacts, one test, and the same chain for all fifteen requirements. The review also caught a shift target a quarter of what that fleet really moves. |
 
 ## Close
 
 | Cue | Hold | Screen | Highlight | Narration |
 |---|---|---|---|---|
-| 4:30 | 18s | The room, reset and quiet | — | A hundred and ten tests. Thirteen of thirteen evaluation cases. Zero prohibited actions allowed, zero approvals bypassed. Every other system knows its own domain. CAIRN connects them, argues the trade-offs, gets a person to sign, and leaves a record of the whole decision. It recommends. It does not authorise. |
+| 4:28 | 20s | The room, reset and quiet | - | A hundred and ten tests. Thirteen of thirteen evaluation cases. No prohibited action allowed. No approval bypassed. Other systems each know their own corner. CAIRN reads them together, argues the trade-offs, gets a person to sign, and leaves a record that rebuilds the decision. It recommends. It does not authorise. |
 
 ## Recording it
 
-A human voice is worth more than a clean one. Record in one pass against the cut; retakes
+A human voice is worth more than a clean one. Record in one pass against the cut. Retakes
 per beat are cheap, because the beats are fixed and the fixture replays identically.
 
-The synthesised floor, which needs no network and no key:
+The synthesised floor needs no network and no key:
 
     python3 captures/narrate.py
 
-It reads the words from this file and the timings from `captures/beats.json`, speaks each
+It takes the words from this file and the timings from `captures/beats.json`, speaks each
 line with macOS `say`, lays it at its beat, and reports any line that overruns.
 
 ## What must not be said
