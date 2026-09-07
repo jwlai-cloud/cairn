@@ -1,133 +1,166 @@
 /**
  * Demo capture for the CAIRN situation room.
  *
- * Records the golden path with the pacing from docs/architecture/08 8.5, so the timing
- * can be judged before any narration is written.
+ * Records the live application in the order the cue sheet declares, with the highlight
+ * overlay pointing at whatever the narration is discussing. Nothing is mocked for the
+ * camera and no frame is a slide pretending to be software - the three TOGAF frames are
+ * genuinely slides and are recorded separately by capture-slides.mjs.
  *
- * Viewport is deliberately narrow. Apparent text size in the finished video is set by
- * how far the viewport is scaled up into the frame, not by capture resolution: a 1280
- * viewport in a 1920 frame magnifies everything 1.5x, a 1920 viewport does not magnify
- * it at all. Export resolution is a separate axis and only buys sharpness.
+ * The cue sheet in captures/narration.md is the plan; this file must hold each beat for
+ * the duration declared there. Beats are also measured against the video clock and
+ * written to captures/beats.json, because a requested hold and where the beat lands in
+ * the recording are not the same number.
  *
- *   node captures/capture.mjs [outfile.webm] [--fast]
+ * Beats are tagged pre or post. The slides splice between them, so edit.sh assembles
+ * app-pre, slides, app-post.
+ *
+ *   node captures/capture.mjs [--fast]
  */
+import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
+import { HIGHLIGHT_CSS, HIGHLIGHT_JS, TOPOLOGY_CSS, TOPOLOGY_JS } from './overlays.mjs';
 
 const OUT_DIR = new URL('.', import.meta.url).pathname;
 const FAST = process.argv.includes('--fast');
-const SCALE = FAST ? 0.18 : 1;          // --fast walks the same beats in ~30s
-// Record at native 1920 and zoom the page 1.5x. Playwright's recordVideo.size PADS
-// rather than scales, so asking for a bigger canvas than the viewport just letterboxes
-// the page into a corner. Zooming instead means the layout computes at an effective
-// 1280 CSS width - which is what makes the type large in frame - while painting into
-// 1920 real pixels, so it stays sharp.
+const SCALE = FAST ? 0.15 : 1;
+// Native 1920 with the page zoomed 1.5x. Playwright's recordVideo.size pads rather than
+// scales, so a canvas larger than the viewport letterboxes the page into a corner.
+// Zooming makes the layout compute at an effective 1280 CSS width, which is what makes
+// the type large in frame, while still painting into 1920 real pixels.
 const ZOOM = 1.5;
 const VIEWPORT = { width: 1920, height: 1200 };
-const VIDEO = { width: 1920, height: 1200 };
+const TOPOLOGY = JSON.parse(readFileSync(new URL('./topology.json', import.meta.url)));
 
 const beats = [];
-let t0 = 0;   // wall clock at the first recorded frame; set once the page exists
+let t0 = 0;
 
-/**
- * Hold the current frame for `seconds`, recording where the beat lands in the VIDEO.
- *
- * The requested hold is not where the beat ends up. Every click carries Playwright's
- * actionability checks and every evaluate a round trip, and on a page running a 3D
- * scene those cost real recorded time - about twenty-nine seconds across a four minute
- * take, unevenly spread. Summing the requested holds therefore drifts, and a caption
- * cut to that sum lands on the wrong shot: the denial beat missed its own toast by
- * twenty-four seconds that way.
- *
- * So measure instead of assume. Recording begins with the page, so wall clock since
- * then is the video clock, and `captures/beats.json` is the single source of truth for
- * every downstream timing.
- */
-async function beat(page, seconds, label) {
+/** Hold the current frame for `seconds`, recording where the beat lands in the video. */
+async function beat(page, seconds, section, label) {
   const at = (Date.now() - t0) / 1000;
   await page.waitForTimeout(Math.max(seconds * 1000 * SCALE, 120));
-  beats.push({ at, seconds: (Date.now() - t0) / 1000 - at, label });
+  beats.push({ at, seconds: (Date.now() - t0) / 1000 - at, section, label });
 }
+
+// Wait for the target to be visible first. Several of these follow a click whose fetch
+// resolves later, and highlighting a hidden element measures a zero-sized rect: the ring
+// lands in the top-left corner and the thing being discussed gets dimmed instead. That
+// happened on the denial beat, which is the worst possible place for it.
+const hl = async (page, sel) => {
+  await page.locator(sel).first().waitFor({ state: 'visible', timeout: 15000 });
+  await page.evaluate((s) => window.capHighlight(s), sel);
+};
+const clear = (page) => page.evaluate(() => window.capClear());
+const wait = (page, ms) => page.waitForTimeout(Math.max(ms * SCALE, 60));
 
 const browser = await chromium.launch({
   args: ['--use-gl=angle', '--enable-unsafe-swiftshader', '--hide-scrollbars'],
 });
 const context = await browser.newContext({
   viewport: VIEWPORT,
-  recordVideo: { dir: OUT_DIR, size: VIDEO },
+  recordVideo: { dir: OUT_DIR, size: VIEWPORT },
 });
 const page = await context.newPage();
 t0 = Date.now();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 
-await page.addStyleTag; // (no-op guard: style is applied after load below)
 await page.goto('http://127.0.0.1:8099/', { waitUntil: 'networkidle' });
 await page.evaluate((z) => { document.documentElement.style.zoom = String(z); }, ZOOM);
+await page.addStyleTag({ content: HIGHLIGHT_CSS + TOPOLOGY_CSS });
+await page.evaluate(HIGHLIGHT_JS);
+await page.evaluate(TOPOLOGY_JS, TOPOLOGY);
 await page.evaluate(() => document.fonts.ready);
 await page.waitForTimeout(900);
 await page.click('#btnReset');
 await page.waitForTimeout(600);
 
-// Beats follow docs/architecture/10-demo-video-plan.md. Safety and reliability carry
-// the spine: the denial, the approval token and the UNKNOWN/reconcile sequence are the
-// three beats that must never be cut.
+// ---------------------------------------------------------------------------- pre
 
-// 0:00 the problem — the room before anything goes wrong
-await beat(page, 26, 'Normal shift: 16 900 t of 28 000 t, eight trucks, no alerts');
+// 0:00 · a shift, not a dashboard
+await beat(page, 22, 'pre', 'Normal shift, trucks running, CAIRN quiet');
 
-// 0:26 correlation
+// 0:22 · the decision window
 await page.click('#btnInjectAll');
-await beat(page, 12, 'Five signals from four systems land on the timeline');
+await hl(page, '#timeline');
+await beat(page, 21, 'pre', 'Crusher, truck and weather events land');
+await clear(page);
+
+// 0:43 · the design in one glance
+await hl(page, '.spine');
+await beat(page, 19, 'pre', 'The decision spine at rest');
+
+// 1:02 · correlate, and the graph starts
 await page.click('#btnAnalyse');
-await beat(page, 18, 'Four specialists in parallel; spine fills with measured durations');
+await beat(page, 20, 'pre', 'Strands graph fills, four specialists in parallel');
 
-// 0:56 evidence, including the bad kind
+// 1:22 · why Strands. The typed-findings claim, so the fan-in is shown over the room
+// rather than as a separate slide - the live spine stays visible around it.
+await hl(page, '.spine');
+await wait(page, 7000);
+await page.evaluate(() => window.capTopology(true));
+await wait(page, 10500);
+await page.evaluate(() => window.capTopology(false));
+await beat(page, 2, 'pre', 'Typed findings cross the edges: the fan-in, over the live room');
+await clear(page);
+
+// 1:42 · honest evidence
 await page.evaluate(() => document.querySelector('.flag.stale')?.scrollIntoView({ block: 'center' }));
-await beat(page, 16, 'STALE telemetry and a 13-minute source CONFLICT, both surfaced');
-await page.hover('.agent:nth-child(2)');
-await beat(page, 10, 'Agent cards: tool chips, evidence counts, confidence, durations');
+await hl(page, '#evidenceList');
+await beat(page, 16, 'pre', 'Stale telemetry and a source conflict, both surfaced');
+await clear(page);
 
-// 1:22 three options that actually differ
+// 1:58 · options, not a magic answer
+await hl(page, '#scenarioCards');
 await page.click('[data-scenario="scn_protect_safety"]');
-await beat(page, 9, 'Protect safety: +4 900 t, LOW risk');
+await wait(page, 4500);
 await page.click('[data-scenario="scn_preserve_equipment"]');
-await beat(page, 8, 'Preserve equipment: +6 100 t, crusher capped');
+await wait(page, 4500);
 await page.click('[data-scenario="scn_recover_tonnes"]');
-await beat(page, 11, 'Recover tonnes: +7 600 t, recommended, reason shown');
+await beat(page, 10, 'pre', 'Three options, then the recommended plan and its route');
+await clear(page);
 
-// 1:50 CLAIM 1 - the model cannot authorise anything
+// 2:17 · where the system draws the line
 await page.click('#btnProhibited');
-await beat(page, 26, 'DENIED: rule T4-PROHIBITED-INTERLOCK, tier 4, no model call');
+await hl(page, '#toast');
+await beat(page, 24, 'pre', 'DENIED by deterministic policy, no model call');
+await clear(page);
 
-// 2:16 CLAIM 2 - a human has to sign
+// 2:41 · a person has to sign
 await page.click('#btnApprove');
-await beat(page, 12, 'Policy escalates to a named role');
+await wait(page, 5000);
 await page.click('#btnApprove');
-await beat(page, 16, 'Scoped approval: token bound to plan version and evidence hash');
+await hl(page, '#toast');
+await beat(page, 14, 'pre', 'Scoped approval: named role, plan version, single use');
+await clear(page);
 
-// 2:44 CLAIM 3 - fail safe when the world is ambiguous
+// 3:00 · when the world misbehaves
 await page.click('#btnTimeout');
-await beat(page, 16, 'Dispatch times out AFTER the call may have applied -> UNKNOWN');
+await hl(page, '#toast');
+await wait(page, 9000);
 await page.locator('#btnReconcile').click({ button: 'right' });
-await beat(page, 14, 'Blind retry REFUSED: RECONCILIATION_REQUIRED');
+await wait(page, 7500);
 await page.click('#btnReconcile');
-await beat(page, 12, 'Reconciled: UNKNOWN -> RECONCILING -> SUCCEEDED');
+await beat(page, 7, 'pre', 'Timeout to UNKNOWN, blind retry refused, then reconciled');
+await clear(page);
 
-// 3:26 simulation-only, then the whole chain
-await page.click('#btnApprove');
-await beat(page, 10, 'Outcome verified: truck still down, residual risks still open');
+// --------------------------------------------------------------------------- post
+// The three TOGAF frames splice in here.
+
+// 4:27 · the audit trail. One of the two moments a viewer should carry away.
 await page.click('#btnAudit');
-await beat(page, 14, 'Audit: event -> evidence -> findings -> policy -> approval -> action -> outcome');
+await hl(page, '.audit');
+await wait(page, 4000);
 await page.evaluate(() => {
   const el = document.querySelector('.audit');
   if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
 });
-await beat(page, 10, 'Scroll the full chain');
-await page.click('#btnCloseAudit');
+await beat(page, 7, 'post', 'The chain: event, evidence, findings, policy, approval, action, outcome');
+await clear(page);
 
-// 4:00 replay
+// 4:38 · close
+await page.click('#btnCloseAudit');
 await page.click('#btnReset');
-await beat(page, 10, 'Reset: the same fixtures replay to the same decision');
+await beat(page, 10, 'post', 'The room, reset and quiet');
 
 await context.close();
 await browser.close();
@@ -137,12 +170,15 @@ const files = fs.readdirSync(OUT_DIR).filter((f) => f.endsWith('.webm'));
 fs.writeFileSync(`${OUT_DIR}beats.json`, `${JSON.stringify(beats, null, 2)}\n`);
 
 const runtime = beats.at(-1).at + beats.at(-1).seconds;
-console.log(`\nrecorded runtime: ${Math.floor(runtime / 60)}:${String(Math.round(runtime % 60)).padStart(2, '0')}`);
+const pre = beats.filter((b) => b.section === 'pre');
+const preEnd = pre.at(-1).at + pre.at(-1).seconds;
+console.log(`\napp runtime: ${Math.floor(runtime / 60)}:${String(Math.round(runtime % 60)).padStart(2, '0')}`);
+console.log(`pre ends at ${preEnd.toFixed(1)}s, post starts at ${beats.find((b) => b.section === 'post').at.toFixed(1)}s`);
 console.log(`video: ${files.join(', ') || 'none written'}`);
 console.log(`pageerrors: ${JSON.stringify(errors.slice(0, 3))}`);
 console.log('\nbeat sheet (measured against the video clock)');
 for (const b of beats) {
   const m = Math.floor(b.at / 60);
   const s = String(Math.round(b.at % 60)).padStart(2, '0');
-  console.log(`  ${m}:${s}  ${b.seconds.toFixed(1).padStart(5)}s  ${b.label}`);
+  console.log(`  ${b.section === 'post' ? '+' : ' '}${m}:${s}  ${b.seconds.toFixed(1).padStart(5)}s  ${b.label}`);
 }

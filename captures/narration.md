@@ -53,7 +53,7 @@ rather than speaking faster.
 | Cue | Hold | Screen | Highlight | Narration |
 |---|---|---|---|---|
 | 1:02 | 20s | Four signals arrive. Strands graph starts. Specialists run in parallel. | `.spine` | Five signals arrive from four source systems. CAIRN correlates them into one incident and starts a bounded Strands workflow. Operations, reliability, risk and scenario planning work in parallel, so the decision does not wait on handovers. The graph gives the work clear limits and a clear result. |
-| 1:22 | 20s | Specialist nodes complete with measured durations | `.spine .lvl u` | We chose Strands because it gives us a practical way to compose these specialists without building an uninspectable swarm. Each one returns a structured finding rather than a paragraph of text. Evidence, assumptions and uncertainty travel with that finding into the next stage. That makes the reasoning testable, and easier to trust. |
+| 1:22 | 20s | Specialist nodes complete with measured durations | `.spine` | We chose Strands because it gives us a practical way to compose these specialists without building an uninspectable swarm. Each one returns a structured finding rather than a paragraph of text. Evidence, assumptions and uncertainty travel with that finding into the next stage. That makes the reasoning testable, and easier to trust. |
 
 ## Act 3 - evidence, options, and where the line is
 
@@ -73,11 +73,17 @@ rather than speaking faster.
 | 3:48 | 25s | Animate the safety question through each artefact view | each link in turn | Take the safety question on screen. Can CAIRN waive a safety control? The answer becomes a principle: no direct control path to operational technology. That becomes a requirement: high-consequence actions are denied for every role. It becomes a policy service in the architecture, and a test that fails if a model is ever consulted. |
 | 4:13 | 14s | Requirements table, test-id column | test-id column | That discipline even caught an inconsistency in our own synthetic scenario. The shift target did not line up with the fleet capacity we had declared. We corrected it before it became a misleading demo. |
 
-## Close
+## Close - the audit trail, then the thesis
+
+The audit chain is one of the two moments a viewer should carry out of this video. It was
+a screen note inside a twenty-one second beat that was also delivering the thesis, which
+is too much for one beat. It now has its own, taken from that same twenty-one seconds
+rather than from the runtime.
 
 | Cue | Hold | Screen | Highlight | Narration |
 |---|---|---|---|---|
-| 4:27 | 21s | Reset to the situation room. Audit trail, then the quiet mine view. | - | Every behaviour you have seen here is covered by tests. CAIRN does not replace fleet management, plant control, or the systems a mine already trusts. It connects them when a decision crosses boundaries, keeps authority with people, and leaves a record of what happened. It recommends. It does not authorise. |
+| 4:27 | 11s | Open the audit trace. Scroll the chain: event, evidence, findings, policy, approval, action, outcome. | `.audit` | Every behaviour you have seen here is covered by tests. CAIRN does not replace fleet management, plant control, or the systems a mine already trusts. |
+| 4:38 | 10s | Close the drawer. The room, reset and quiet, trucks running. | - | It connects them when a decision crosses boundaries, keeps authority with people, and leaves a record of what happened. It recommends. It does not authorise. |
 
 ## Recording it
 
