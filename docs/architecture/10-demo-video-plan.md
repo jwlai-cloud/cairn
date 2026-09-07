@@ -27,6 +27,12 @@ Ranked by how much it moves the score, not by how interesting it is to build.
 
 Two independent things get confused here. **Viewport width sets apparent size**: a layout that computes at an effective 1280 CSS width and paints into 1920 real pixels is 1.5× larger in frame than the same layout at 1920. **Export resolution sets sharpness**, and only that. Recording 4K at a 1920 viewport gives sharp, tiny text; that is the trap. Playwright's `recordVideo.size` pads rather than scales, so asking for a canvas larger than the viewport letterboxes the page into a corner — the zoom is what does the work.
 
+**Timing.** `capture.mjs` measures where each beat actually lands in the recording and writes `captures/beats.json`; `edit.sh` and `captions.py` read only that. Nothing downstream is hand-timed, because the requested hold and the recorded position are not the same number — every click carries Playwright's actionability checks and every `evaluate` a round trip, and on a page running a 3D scene that added twenty-nine seconds across a four-minute take, unevenly spread. Timings cut to the requested holds put the denial caption twenty-four seconds past its own toast.
+
+**Narration and speed are mutually exclusive.** The raw take already fits the cap, so no beat is compressed. A beat sped up 2× has half the room for words, and the cue sheet in `captures/narration.md` is written to the recorded durations. Speed is worth reintroducing for exactly one thing — a live model inference with nothing being said over it — and it should arrive then, per beat, not as a standing setting.
+
+**Captions.** Burned in from the same beat file, stating what each beat *proves* rather than describing the screen. They are not a substitute for narration; they are what carries the argument for a judge watching muted or at 360p on a phone. Rendered after the 4K upscale so the type is drawn at output resolution rather than scaled up into it.
+
 **Determinism.** The fixture replays identically, so a retake is frame-comparable to the take before it. If a beat lands badly, re-shoot only that beat.
 
 **Motion.** The application already animates: haul trucks crawl their routes, status beacons pulse and bloom, route overlays light when a plan is selected, the decision spine fills as nodes complete. Add only two post effects, both in service of reading:

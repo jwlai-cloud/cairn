@@ -26,13 +26,26 @@ const VIEWPORT = { width: 1920, height: 1200 };
 const VIDEO = { width: 1920, height: 1200 };
 
 const beats = [];
-let elapsed = 0;
+let t0 = 0;   // wall clock at the first recorded frame; set once the page exists
 
-/** Hold the current frame for `seconds`, recording what the beat is meant to show. */
+/**
+ * Hold the current frame for `seconds`, recording where the beat lands in the VIDEO.
+ *
+ * The requested hold is not where the beat ends up. Every click carries Playwright's
+ * actionability checks and every evaluate a round trip, and on a page running a 3D
+ * scene those cost real recorded time - about twenty-nine seconds across a four minute
+ * take, unevenly spread. Summing the requested holds therefore drifts, and a caption
+ * cut to that sum lands on the wrong shot: the denial beat missed its own toast by
+ * twenty-four seconds that way.
+ *
+ * So measure instead of assume. Recording begins with the page, so wall clock since
+ * then is the video clock, and `captures/beats.json` is the single source of truth for
+ * every downstream timing.
+ */
 async function beat(page, seconds, label) {
-  beats.push({ at: elapsed, seconds, label });
-  elapsed += seconds;
+  const at = (Date.now() - t0) / 1000;
   await page.waitForTimeout(Math.max(seconds * 1000 * SCALE, 120));
+  beats.push({ at, seconds: (Date.now() - t0) / 1000 - at, label });
 }
 
 const browser = await chromium.launch({
@@ -43,6 +56,7 @@ const context = await browser.newContext({
   recordVideo: { dir: OUT_DIR, size: VIDEO },
 });
 const page = await context.newPage();
+t0 = Date.now();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 
@@ -118,13 +132,17 @@ await beat(page, 10, 'Reset: the same fixtures replay to the same decision');
 await context.close();
 await browser.close();
 
-const files = (await import('node:fs')).readdirSync(OUT_DIR).filter((f) => f.endsWith('.webm'));
-console.log(`\nplanned runtime: ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`);
+const fs = await import('node:fs');
+const files = fs.readdirSync(OUT_DIR).filter((f) => f.endsWith('.webm'));
+fs.writeFileSync(`${OUT_DIR}beats.json`, `${JSON.stringify(beats, null, 2)}\n`);
+
+const runtime = beats.at(-1).at + beats.at(-1).seconds;
+console.log(`\nrecorded runtime: ${Math.floor(runtime / 60)}:${String(Math.round(runtime % 60)).padStart(2, '0')}`);
 console.log(`video: ${files.join(', ') || 'none written'}`);
 console.log(`pageerrors: ${JSON.stringify(errors.slice(0, 3))}`);
-console.log('\nbeat sheet');
+console.log('\nbeat sheet (measured against the video clock)');
 for (const b of beats) {
   const m = Math.floor(b.at / 60);
-  const s = String(b.at % 60).padStart(2, '0');
-  console.log(`  ${m}:${s}  ${String(b.seconds).padStart(2)}s  ${b.label}`);
+  const s = String(Math.round(b.at % 60)).padStart(2, '0');
+  console.log(`  ${m}:${s}  ${b.seconds.toFixed(1).padStart(5)}s  ${b.label}`);
 }

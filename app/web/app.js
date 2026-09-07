@@ -443,14 +443,17 @@ async function openAudit() {
   $('auditDrawer').hidden = false;
 }
 
+// A refusal stays on screen until it is superseded or dismissed. It used to clear
+// itself after nine seconds, which meant the denial - the thing the operator most needs
+// to have seen - quietly vanished while they were still reading the rule id. An outcome
+// that expires on a timer is the one kind of message that must not.
 function toast(title, message, detail, kind) {
   const el = $('toast');
   el.className = `toast ${kind ?? ''}`;
   el.innerHTML = `<div class="toast-title">${title}</div><div>${message}</div>
-    ${detail ? `<div class="toast-detail">${Object.entries(detail).map(([k, v]) => `${k}: ${v}`).join(' · ')}</div>` : ''}`;
+    ${detail ? `<div class="toast-detail">${Object.entries(detail).map(([k, v]) => `${k}: ${v}`).join(' · ')}</div>` : ''}
+    <div class="toast-dismiss">click to dismiss</div>`;
   el.hidden = false;
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => { el.hidden = true; }, 9000);
 }
 
 // ----------------------------------------------------------------------- wiring
@@ -465,6 +468,7 @@ $('btnReconcile').onclick = reconcile;
 $('btnReconcile').oncontextmenu = (e) => { e.preventDefault(); retryBlindly(); };
 $('btnAudit').onclick = openAudit;
 $('btnCloseAudit').onclick = () => { $('auditDrawer').hidden = true; };
+$('toast').onclick = () => { $('toast').hidden = true; };
 $('btnReset').onclick = async () => {
   $('auditDrawer').hidden = true;
   $('toast').hidden = true;

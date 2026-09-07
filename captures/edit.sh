@@ -1,53 +1,41 @@
 #!/usr/bin/env bash
 # Cut a raw capture down to a submission video.
 #
-# Record raw at whatever pace the software actually runs at - including slow real-model
-# runs - then compress time here. Speeding up a segment is honest as long as nothing is
-# reordered and nothing is faked; a 40 second Bedrock inference shown at 8x is still the
-# real inference. What must never be sped up is a beat the viewer has to READ: the
-# denial, the approval token, the UNKNOWN refusal.
+#   ./captures/edit.sh raw.webm [out.mp4] [beats.json]
 #
-#   ./captures/edit.sh raw.webm out.mp4
+# There is no segment table and no speed ramp. The raw take already fits the five
+# minute cap, and speeding a beat up costs the narration its room: captures/narration.md
+# is written to these durations, and a beat compressed 2x has half the words. Speed is
+# worth reintroducing for exactly one thing - a live model inference with nothing being
+# said over it - and it should arrive then, per beat, not as a standing setting.
 #
-# Segments are declared below as: START END SPEED LABEL
-# SPEED 1 = real time, 4 = four times faster. Times are in the RAW recording.
+# Trim points and caption timings both come from captures/beats.json, which capture.mjs
+# measures against the video clock. Nothing here is hand-timed.
 set -euo pipefail
 
-RAW="${1:?usage: edit.sh <raw.webm> [out.mp4]}"
+RAW="${1:?usage: edit.sh <raw.webm> [out.mp4] [beats.json]}"
 OUT="${2:-captures/cairn-demo.mp4}"
+BEATS="${3:-captures/beats.json}"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-# Beats from docs/architecture/10-demo-video-plan.md. Read-critical beats stay at 1x.
-SEGMENTS=(
-  "0    26   2.0  problem: the quiet room"
-  "26   56   2.0  correlation: five signals become one incident"
-  "56   82   1.5  evidence: stale and conflicting, both surfaced"
-  "82   110  1.5  three options that trade different things away"
-  "110  136  1.0  DENIED - tier 4, no model call"
-  "136  168  1.0  approval: scoped, expiring, single-use"
-  "168  214  1.0  timeout -> UNKNOWN -> retry refused -> reconciled"
-  "214  250  1.5  outcome and the audit chain"
-  "250  260  2.0  reset and replay"
+# Start at the first beat, which drops the page load and reset preamble; end at the last.
+read -r START DUR < <(python3 - "$BEATS" <<'PY'
+import json, sys
+beats = json.load(open(sys.argv[1]))
+start = beats[0]["at"]
+print(f'{start:.3f} {beats[-1]["at"] + beats[-1]["seconds"] - start:.3f}')
+PY
 )
 
-echo "cutting $RAW"
-i=0
-: > "$WORK/list.txt"
-for seg in "${SEGMENTS[@]}"; do
-  read -r start end speed label <<<"$seg"
-  dur=$(echo "$end - $start" | bc)
-  out="$WORK/seg$(printf '%02d' "$i").mp4"
-  # setpts divides presentation timestamps, so 1/speed compresses the segment.
-  ffmpeg -v error -y -ss "$start" -t "$dur" -i "$RAW" \
-    -vf "setpts=PTS/${speed},scale=3840:-2:flags=lanczos" \
-    -an -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -r 30 "$out"
-  printf "file '%s'\n" "$out" >> "$WORK/list.txt"
-  printf "  %-52s %5ss raw -> %5.1fs at %sx\n" "$label" "$dur" "$(echo "$dur / $speed" | bc -l)" "$speed"
-  i=$((i + 1))
-done
+python3 captures/captions.py "$BEATS" > "$WORK/captions.ass"
 
-ffmpeg -v error -y -f concat -safe 0 -i "$WORK/list.txt" -c copy "$OUT"
+# Captions are burned after the upscale so the type is rendered at 4K rather than
+# scaled up into it, and the .ass header declares that frame so libass sizes against it.
+echo "cutting $RAW from ${START}s for ${DUR}s"
+ffmpeg -v error -y -ss "$START" -t "$DUR" -i "$RAW" \
+  -vf "scale=3840:-2:flags=lanczos,ass=filename='$WORK/captions.ass'" \
+  -an -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -r 30 "$OUT"
 
 total=$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$OUT")
 secs=${total%.*}
