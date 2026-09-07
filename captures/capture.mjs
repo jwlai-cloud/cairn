@@ -31,6 +31,19 @@ const ZOOM = 1.5;
 const VIEWPORT = { width: 1920, height: 1200 };
 const TOPOLOGY = JSON.parse(readFileSync(new URL('./topology.json', import.meta.url)));
 
+// Holds come from the cue sheet, in app-cue order, so a re-timed sheet cannot leave the
+// capture running to the old durations. The sheet's Source column says which cues are
+// filmed here and which are slides.
+const APP_HOLDS = readFileSync(new URL('./narration.md', import.meta.url), 'utf8')
+  .split('\n')
+  .map((l) => l.match(/^\|\s*(\d+):(\d\d)\s*\|\s*(\d+)s\s*\|\s*app\s*\|/))
+  .filter(Boolean)
+  .map((m) => Number(m[3]));
+if (APP_HOLDS.length !== 12) {
+  throw new Error(`expected 12 app cues in the sheet, found ${APP_HOLDS.length}`);
+}
+let cueIndex = 0;
+
 const beats = [];
 let t0 = 0;
 
@@ -44,7 +57,8 @@ let t0 = 0;
  * Measuring from the top also makes each cue last exactly what the sheet declares, so the
  * cue sheet's times are the output times by construction rather than by luck.
  */
-async function cue(page, seconds, section, label, fn) {
+async function cue(page, section, label, fn) {
+  const seconds = APP_HOLDS[cueIndex++];
   const at = (Date.now() - t0) / 1000;
   if (fn) await fn();
   const spent = (Date.now() - t0) / 1000 - at;
@@ -89,25 +103,25 @@ await page.waitForTimeout(600);
 // ---------------------------------------------------------------------------- pre
 
 // 0:00 · a shift, not a dashboard
-await cue(page, 22, 'pre', 'Normal shift, trucks running, CAIRN quiet');
+await cue(page, 'pre', 'Normal shift, trucks running, CAIRN quiet');
 
 // 0:22 · the decision window
-await cue(page, 21, 'pre', 'Crusher, truck and weather events land', async () => {
+await cue(page, 'pre', 'Crusher, truck and weather events land', async () => {
   await page.click('#btnInjectAll');
   await hl(page, '#timeline');
 });
 await clear(page);
 
 // 0:43 · the design in one glance
-await cue(page, 19, 'pre', 'The decision spine at rest', () => hl(page, '.spine'));
+await cue(page, 'pre', 'The decision spine at rest', () => hl(page, '.spine'));
 
 // 1:02 · correlate, and the graph starts
-await cue(page, 20, 'pre', 'Strands graph fills, four specialists in parallel',
+await cue(page, 'pre', 'Strands graph fills, four specialists in parallel',
   () => page.click('#btnAnalyse'));
 
 // 1:22 · why Strands. This is the typed-findings claim, so the fan-in is shown over the
 // live room rather than as a separate slide: the spine stays visible around it.
-await cue(page, 20, 'pre', 'Typed findings cross the edges: the fan-in, over the live room',
+await cue(page, 'pre', 'Typed findings cross the edges: the fan-in, over the live room',
   async () => {
     await hl(page, '.spine');
     await wait(page, 6500);
@@ -118,14 +132,14 @@ await cue(page, 20, 'pre', 'Typed findings cross the edges: the fan-in, over the
 await clear(page);
 
 // 1:42 · honest evidence
-await cue(page, 16, 'pre', 'Stale telemetry and a source conflict, both surfaced', async () => {
+await cue(page, 'pre', 'Stale telemetry and a source conflict, both surfaced', async () => {
   await page.evaluate(() => document.querySelector('.flag.stale')?.scrollIntoView({ block: 'center' }));
   await hl(page, '#evidenceList');
 });
 await clear(page);
 
 // 1:58 · options, not a magic answer
-await cue(page, 19, 'pre', 'Three options, then the recommended plan and its route', async () => {
+await cue(page, 'pre', 'Three options, then the recommended plan and its route', async () => {
   await hl(page, '#scenarioCards');
   await page.click('[data-scenario="scn_protect_safety"]');
   await wait(page, 4500);
@@ -136,14 +150,14 @@ await cue(page, 19, 'pre', 'Three options, then the recommended plan and its rou
 await clear(page);
 
 // 2:17 · where the system draws the line
-await cue(page, 24, 'pre', 'DENIED by deterministic policy, no model call', async () => {
+await cue(page, 'pre', 'DENIED by deterministic policy, no model call', async () => {
   await page.click('#btnProhibited');
   await hl(page, '#toast');
 });
 await clear(page);
 
 // 2:41 · a person has to sign
-await cue(page, 19, 'pre', 'Scoped approval: named role, plan version, single use', async () => {
+await cue(page, 'pre', 'Scoped approval: named role, plan version, single use', async () => {
   await page.click('#btnApprove');
   await wait(page, 5000);
   await page.click('#btnApprove');
@@ -152,7 +166,7 @@ await cue(page, 19, 'pre', 'Scoped approval: named role, plan version, single us
 await clear(page);
 
 // 3:00 · when the world misbehaves
-await cue(page, 24, 'pre', 'Timeout to UNKNOWN, blind retry refused, then reconciled', async () => {
+await cue(page, 'pre', 'Timeout to UNKNOWN, blind retry refused, then reconciled', async () => {
   await page.click('#btnTimeout');
   await hl(page, '#toast');
   await wait(page, 9000);
@@ -166,7 +180,7 @@ await clear(page);
 // The three TOGAF frames splice in here.
 
 // 4:27 · the audit trail. One of the two moments a viewer should carry away.
-await cue(page, 11, 'post', 'The chain: event, evidence, findings, policy, approval, action, outcome',
+await cue(page, 'post', 'The chain: event, evidence, findings, policy, approval, action, outcome',
   async () => {
     await page.click('#btnAudit');
     await hl(page, '.audit');
@@ -179,7 +193,7 @@ await cue(page, 11, 'post', 'The chain: event, evidence, findings, policy, appro
 await clear(page);
 
 // 4:38 · close
-await cue(page, 10, 'post', 'The room, reset and quiet', async () => {
+await cue(page, 'post', 'The room, reset and quiet', async () => {
   await page.click('#btnCloseAudit');
   await page.click('#btnReset');
 });

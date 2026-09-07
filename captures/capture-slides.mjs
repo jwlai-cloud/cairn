@@ -8,15 +8,27 @@
  *   node captures/capture-slides.mjs            # PNGs for review
  *   node captures/capture-slides.mjs --video    # webm for the cut
  */
+import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 
 const OUT = new URL('.', import.meta.url).pathname;
-const PAGE = `file://${new URL('../docs/design/togaf-slides.html', import.meta.url).pathname}`;
+const PAGE = `file://${new URL('../docs/design/slides.html', import.meta.url).pathname}`;
 const VIDEO = process.argv.includes('--video');
 const VIEWPORT = { width: 1280, height: 800 };
 
-// Act 4 holds, from the cue sheet. Slide B's steps land on its clause boundaries.
-const HOLD = { a: 24, b: 25, c: 14 };
+// Act 4 holds, read from the cue sheet rather than written here, so a re-timed sheet
+// cannot silently desync the slide section from the narration.
+const SHEET = new URL('./narration.md', import.meta.url).pathname;
+const slideHolds = readFileSync(SHEET, 'utf8')
+  .split('\n')
+  .map((l) => l.match(/^\|\s*(\d+):(\d\d)\s*\|\s*(\d+)s\s*\|\s*slide\s*\|/))
+  .filter(Boolean)
+  .map((m) => Number(m[3]));
+if (slideHolds.length !== 6) {
+  throw new Error(`expected 6 slide cues in the sheet, found ${slideHolds.length}`);
+}
+// arch has three states, then the three method frames.
+const [A1, A2, A3, HA, HB, HC] = slideHolds;
 const B_STEPS = [0, 5, 10, 15, 20];
 
 const browser = await chromium.launch({ args: ['--hide-scrollbars'] });
@@ -27,6 +39,20 @@ const context = await browser.newContext({
 const page = await context.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
+
+// The architecture frame is one slide stepped three times, so it is filmed as one clip.
+await page.goto(`${PAGE}#arch`, { waitUntil: 'load' });
+await page.evaluate(() => { document.body.dataset.slide = 'arch'; });
+await page.evaluate(() => document.fonts.ready);
+await page.waitForTimeout(400);
+for (const [i, hold] of [A1, A2, A3].entries()) {
+  await page.evaluate((n) => window.archStep(n), i + 1);
+  if (VIDEO) await page.waitForTimeout(hold * 1000);
+  else {
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: `${OUT}../docs/design/arch-${i + 1}.png` });
+  }
+}
 
 for (const slide of ['a', 'b', 'c']) {
   await page.goto(`${PAGE}#${slide}`, { waitUntil: 'load' });
@@ -44,7 +70,7 @@ for (const slide of ['a', 'b', 'c']) {
         last = at;
         await page.evaluate((n) => window.revealStep(n), i + 1);
       }
-      await page.waitForTimeout((HOLD.b - last) * 1000);
+      await page.waitForTimeout((HB - last) * 1000);
     } else {
       await page.evaluate(() => window.revealAll());
       await page.waitForTimeout(700);
@@ -54,13 +80,13 @@ for (const slide of ['a', 'b', 'c']) {
     if (VIDEO) {
       await page.waitForTimeout(6000);
       await page.evaluate(() => window.revealFix());
-      await page.waitForTimeout((HOLD.c - 6) * 1000);
+      await page.waitForTimeout((HC - 6) * 1000);
     } else {
       await page.evaluate(() => window.revealFix());
       await page.waitForTimeout(700);
     }
   } else if (VIDEO) {
-    await page.waitForTimeout(HOLD[slide] * 1000);
+    await page.waitForTimeout(({ a: HA, b: HB, c: HC })[slide] * 1000);
   }
 
   if (!VIDEO) await page.screenshot({ path: `${OUT}../docs/design/togaf-${slide}.png` });
@@ -69,6 +95,6 @@ for (const slide of ['a', 'b', 'c']) {
 await context.close();
 await browser.close();
 console.log(VIDEO
-  ? `recorded ${HOLD.a + HOLD.b + HOLD.c}s of slides`
+  ? `recorded ${slideHolds.reduce((a, b) => a + b, 0)}s of slides`
   : 'wrote docs/design/togaf-{a,b,c}.png');
 console.log(`pageerrors: ${JSON.stringify(errors.slice(0, 3))}`);

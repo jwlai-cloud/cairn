@@ -1,92 +1,74 @@
 [
   {
-    "at": 2.429,
-    "seconds": 26.001,
-    "label": "Normal shift: 16 900 t of 28 000 t, eight trucks, no alerts"
+    "at": 2.449,
+    "seconds": 22.002000000000002,
+    "section": "pre",
+    "label": "Normal shift, trucks running, CAIRN quiet"
   },
   {
-    "at": 28.475,
-    "seconds": 12.001999999999995,
-    "label": "Five signals from four systems land on the timeline"
+    "at": 24.451,
+    "seconds": 21.000999999999998,
+    "section": "pre",
+    "label": "Crusher, truck and weather events land"
   },
   {
-    "at": 40.522,
-    "seconds": 18.003,
-    "label": "Four specialists in parallel; spine fills with measured durations"
+    "at": 45.456,
+    "seconds": 19.00699999999999,
+    "section": "pre",
+    "label": "The decision spine at rest"
   },
   {
-    "at": 58.527,
-    "seconds": 16.001000000000005,
-    "label": "STALE telemetry and a 13-minute source CONFLICT, both surfaced"
+    "at": 64.463,
+    "seconds": 20.001000000000005,
+    "section": "pre",
+    "label": "Strands graph fills, four specialists in parallel"
   },
   {
-    "at": 74.587,
-    "seconds": 10.001999999999995,
-    "label": "Agent cards: tool chips, evidence counts, confidence, durations"
+    "at": 84.464,
+    "seconds": 20.001000000000005,
+    "section": "pre",
+    "label": "Typed findings cross the edges: the fan-in, over the live room"
   },
   {
-    "at": 84.632,
-    "seconds": 9.001999999999995,
-    "label": "Protect safety: +4 900 t, LOW risk"
+    "at": 104.466,
+    "seconds": 16,
+    "section": "pre",
+    "label": "Stale telemetry and a source conflict, both surfaced"
   },
   {
-    "at": 93.675,
-    "seconds": 8.00200000000001,
-    "label": "Preserve equipment: +6 100 t, crusher capped"
+    "at": 120.467,
+    "seconds": 19.00099999999999,
+    "section": "pre",
+    "label": "Three options, then the recommended plan and its route"
   },
   {
-    "at": 101.707,
-    "seconds": 11.001000000000005,
-    "label": "Recover tonnes: +7 600 t, recommended, reason shown"
+    "at": 139.469,
+    "seconds": 24,
+    "section": "pre",
+    "label": "DENIED by deterministic policy, no model call"
   },
   {
-    "at": 112.743,
-    "seconds": 26.00200000000001,
-    "label": "DENIED: rule T4-PROHIBITED-INTERLOCK, tier 4, no model call"
+    "at": 163.47,
+    "seconds": 19.00200000000001,
+    "section": "pre",
+    "label": "Scoped approval: named role, plan version, single use"
   },
   {
-    "at": 138.815,
-    "seconds": 12.001000000000005,
-    "label": "Policy escalates to a named role"
+    "at": 182.473,
+    "seconds": 24.00199999999998,
+    "section": "pre",
+    "label": "Timeout to UNKNOWN, blind retry refused, then reconciled"
   },
   {
-    "at": 150.855,
-    "seconds": 16.00200000000001,
-    "label": "Scoped approval: token bound to plan version and evidence hash"
+    "at": 206.477,
+    "seconds": 11.00399999999999,
+    "section": "post",
+    "label": "The chain: event, evidence, findings, policy, approval, action, outcome"
   },
   {
-    "at": 166.927,
-    "seconds": 16.00200000000001,
-    "label": "Dispatch times out AFTER the call may have applied -> UNKNOWN"
-  },
-  {
-    "at": 182.972,
-    "seconds": 14.001000000000005,
-    "label": "Blind retry REFUSED: RECONCILIATION_REQUIRED"
-  },
-  {
-    "at": 197.003,
-    "seconds": 12.01000000000002,
-    "label": "Reconciled: UNKNOWN -> RECONCILING -> SUCCEEDED"
-  },
-  {
-    "at": 209.178,
-    "seconds": 10.015999999999991,
-    "label": "Outcome verified: truck still down, residual risks still open"
-  },
-  {
-    "at": 219.237,
-    "seconds": 14.001000000000005,
-    "label": "Audit: event -> evidence -> findings -> policy -> approval -> action -> outcome"
-  },
-  {
-    "at": 233.242,
-    "seconds": 10.004000000000019,
-    "label": "Scroll the full chain"
-  },
-  {
-    "at": 243.315,
-    "seconds": 10.001000000000005,
-    "label": "Reset: the same fixtures replay to the same decision"
+    "at": 217.484,
+    "seconds": 10.001999999999981,
+    "section": "post",
+    "label": "The room, reset and quiet"
   }
 ]

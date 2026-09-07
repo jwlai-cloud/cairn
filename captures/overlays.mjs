@@ -96,40 +96,76 @@ export const HIGHLIGHT_JS = () => {
  * ConstraintSet and RiskAssessment.
  */
 export const TOPOLOGY_CSS = `
-#cap-topo{position:fixed;left:50%;top:46%;transform:translate(-50%,-50%) scale(.97);z-index:9100;
+#cap-topo{position:fixed;left:50%;top:45%;transform:translate(-50%,-50%) scale(.96);z-index:9100;
   pointer-events:none;opacity:0;transition:opacity .5s ease,transform .5s ease;
-  background:var(--plate);border:1px solid var(--rule-hi);padding:26px 30px 22px;
-  box-shadow:0 26px 70px rgba(0,0,0,.42);clip-path:var(--chamfer);min-width:660px}
+  background:var(--plate);border:1px solid var(--rule-hi);padding:20px 24px 16px;
+  box-shadow:0 26px 70px rgba(0,0,0,.42);clip-path:var(--chamfer)}
 #cap-topo.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
 #cap-topo h4{font-family:var(--cond);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--haematite);margin:0 0 16px}
-#cap-topo .row{display:grid;grid-template-columns:132px 1fr 168px;align-items:center;
-  gap:12px;padding:5px 0}
-#cap-topo .n{font-family:var(--cond);font-size:15px;font-weight:700}
-#cap-topo .t{font-family:var(--mono);font-size:11.5px;color:var(--survey);text-align:right}
-#cap-topo .wire{height:1px;background:var(--rule-hi);position:relative}
-#cap-topo .wire::after{content:'';position:absolute;right:-1px;top:-3px;
-  border-top:3.5px solid transparent;border-bottom:3.5px solid transparent;
-  border-left:5px solid var(--rule-hi)}
-#cap-topo .join{border-top:1px dashed var(--rule-hi);margin:12px 0 10px;padding-top:12px;
-  display:grid;grid-template-columns:132px 1fr 168px;align-items:center;gap:12px}
-#cap-topo .join .n{color:var(--malachite)}
-#cap-topo .cap{font-family:var(--mono);font-size:10px;color:var(--ink-faint);
-  letter-spacing:.05em;margin-top:14px}
+  color:var(--haematite);margin:0 0 4px}
+#cap-topo .cap{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.05em;
+  margin-top:2px;text-align:center}
+#cap-topo svg{display:block}
+#cap-topo .nl{font-family:var(--cond);font-size:15px;font-weight:700;fill:var(--ink)}
+#cap-topo .ns{font-family:var(--mono);font-size:8.5px;fill:var(--ink-faint)}
+#cap-topo .el{font-family:var(--mono);font-size:9.5px;fill:var(--survey)}
+#cap-topo .card{fill:var(--raise);stroke:var(--rule-hi);stroke-width:1}
+#cap-topo .card.join{fill:var(--ok-bg);stroke:var(--ok-line);stroke-width:1.5}
+#cap-topo .card.src{fill:var(--plate);stroke:var(--rule)}
+#cap-topo .wire{fill:none;stroke:var(--rule-hi);stroke-width:1.4}
+#cap-topo .wire.typed{stroke:var(--survey);stroke-width:1.8}
 `;
 
+/**
+ * The Strands fan-in, drawn as a graph rather than a list.
+ *
+ * Hand geometry, and deliberately so. archify was tried first and its workflow renderer
+ * routes the vertical leg of a cross-lane edge through the source column, so a symmetric
+ * four-into-one join always crosses the intervening lanes' nodes - see
+ * docs/review/archify-fan-in-note.md. The shape here is fixed, small and known in
+ * advance, which is exactly when hand geometry beats a layout engine.
+ *
+ * Three things have to be obvious: the four run at once, the planner waits for all four,
+ * and the edges carry typed findings rather than execution order.
+ */
 export const TOPOLOGY_JS = (edges) => {
+  const W = 700, CARD_W = 168, CARD_H = 46, ROW = 62, TOP = 34;
+  const LX = 8, MX = 300, RX = 500;
+  const rows = edges.specialists.length;
+  const H = TOP + rows * ROW + 10;
+  const midY = TOP + (rows * ROW) / 2 - ROW / 2 + CARD_H / 2;
+
+  const card = (x, y, label, sub, cls = '') => `
+    <rect class="card ${cls}" x="${x}" y="${y}" width="${CARD_W}" height="${CARD_H}" rx="2"/>
+    <text class="nl" x="${x + 12}" y="${y + 20}">${label}</text>
+    <text class="ns" x="${x + 12}" y="${y + 34}">${sub}</text>`;
+
+  // Each specialist leaves its right edge, runs to a shared corridor, then curves into
+  // the planner's left edge. One corridor, four curves: that is what makes it a join.
+  const wire = (y) => {
+    const x0 = LX + CARD_W, y0 = y + CARD_H / 2, x1 = RX;
+    return `<path class="wire typed" d="M${x0} ${y0} H${MX - 46}
+      C${MX} ${y0} ${MX} ${midY} ${MX + 46} ${midY} H${x1}"/>`;
+  };
+
+  // The card says what the agent gathered; the edge says what it hands on. Naming the
+  // type in both places filled the frame with the same word twice.
+  const spec = edges.specialists.map(([name, type, sub], i) => {
+    const y = TOP + i * ROW;
+    return wire(y) + card(LX, y, name, sub) +
+      `<text class="el" x="${MX - 52}" y="${y + CARD_H / 2 - 11}">${type}</text>`;
+  }).join('');
+
   const el = document.createElement('div');
   el.id = 'cap-topo';
-  el.innerHTML = `<h4>Bounded Strands graph &middot; four specialists in parallel</h4>
-    ${edges.specialists.map(([n, t]) => `<div class="row">
-      <span class="n">${n}</span><span class="wire"></span><span class="t">${t}</span>
-    </div>`).join('')}
-    <div class="join">
-      <span class="n">${edges.planner[0]}</span><span class="wire"></span>
-      <span class="t">${edges.planner[1]}</span>
-    </div>
-    <div class="cap">the planner waits for all four &middot; edges carry typed findings, not execution order</div>`;
+  el.innerHTML = `<h4>Bounded Strands graph</h4>
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+      ${spec}
+      ${card(RX, midY - CARD_H / 2, edges.planner[0], edges.planner[2], 'join')}
+      <text class="el" x="${RX + 6}" y="${midY - CARD_H / 2 - 8}">${edges.planner[1]}</text>
+    </svg>
+    <div class="cap">four specialists at once &middot; the planner waits for all four &middot;
+      every edge carries a typed finding</div>`;
   document.body.append(el);
   window.capTopology = (on) => el.classList.toggle('on', on !== false);
 };

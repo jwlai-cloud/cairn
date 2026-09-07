@@ -1,9 +1,15 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>CAIRN · TOGAF slides</title>
+<title>CAIRN · demo slides</title>
 <!--
-  Three frames for Act 4 of the demo, built to the app's own tokens so they read as the
-  same product rather than a deck bolted on afterwards.
+  Six frames for Act 4 of the demo, built to the app's own tokens so they read as the
+  same product rather than a deck bolted on afterwards. Three for the architecture, three
+  for the method.
+
+  The architecture frame is drawn for video rather than embedding the README diagram.
+  That diagram is correct and detailed, which is exactly wrong at this scale: the
+  narration talks about zones and a boundary, so the frame shows zones and a boundary at
+  a size a judge can read on a laptop.
 
   Every identifier on these slides resolves to a real artefact in the repo. Nothing here
   is illustrative. The reveal timings match the narration clause boundaries in
@@ -33,6 +39,8 @@
 body{width:1280px;height:800px;overflow:hidden;background:var(--ground);color:var(--ink);
   font-family:var(--sans);font-size:15px;display:grid;place-items:center}
 .slide{display:none;width:1280px;height:800px;padding:44px 56px;flex-direction:column}
+body:not([data-slide]) .slide#arch,
+body[data-slide='arch'] .slide#arch,
 body:not([data-slide]) .slide#a,
 body[data-slide='a'] .slide#a,
 body[data-slide='b'] .slide#b,
@@ -116,9 +124,89 @@ tr.hi td{background:var(--ok-bg)}
 .box.good .n{color:var(--malachite)}
 .box p{font-size:12.5px;color:var(--ink-dim);margin-top:6px;line-height:1.45}
 
+/* ------------------------------------------------------ architecture (arch) */
+.zones{flex:1;display:flex;flex-direction:column;gap:15px;margin-top:14px;min-height:0}
+.band{flex:1;display:flex;flex-direction:column;justify-content:center;
+  border:1px solid var(--rule);background:var(--plate);padding:14px 16px;clip-path:var(--chamfer);
+  transition:opacity .5s ease,border-color .5s ease,background .5s ease}
+.band.dim{opacity:.34}
+.band > u{font-family:var(--cond);font-size:10px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--ink-faint);text-decoration:none;display:block;margin-bottom:8px}
+.band .items{display:flex;gap:11px;flex-wrap:wrap;align-items:stretch}
+.chip{font-family:var(--cond);font-size:16.5px;font-weight:700;padding:12px 13px;
+  display:flex;flex-direction:column;justify-content:center;
+  border:1px solid var(--rule-hi);background:var(--raise);flex:1;text-align:center;min-width:0}
+.chip small{display:block;font-family:var(--mono);font-size:9.5px;font-weight:400;
+  color:var(--ink-faint);margin-top:3px;letter-spacing:.02em}
+
+.band.graph{border:2px dashed var(--survey);background:var(--info-bg)}
+.band.graph > u{color:var(--survey)}
+.band.graph .chip{border-color:var(--info-line)}
+.band.graph.hot{box-shadow:0 0 0 5px rgba(37,94,150,.16)}
+
+.band.outside.hot{border-color:var(--haematite);box-shadow:0 0 0 5px rgba(179,46,12,.13)}
+.band.outside .chip{border-color:var(--rule-hi)}
+.band.outside.hot .chip{border-color:var(--hot-line);background:var(--hot-bg)}
+
+.band.zone0{border-style:dashed;border-color:var(--rule-hi);background:transparent}
+.band.zone0 .chip{background:transparent;color:var(--ink-faint);border-style:dashed;
+  text-decoration:line-through;text-decoration-thickness:1.5px}
+.band.zone0.hot{border-color:var(--haematite)}
+.band.zone0.hot .chip{color:var(--haematite);border-color:var(--hot-line)}
+.gap{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:12px;
+  font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.06em}
+.gap i{flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--rule-hi) 0 7px,transparent 7px 15px)}
+.band.zone0.hot ~ .gap, .zone0.hot .cut{color:var(--haematite)}
+
 .foot{border-top:1px solid var(--rule);padding-top:10px;margin-top:14px;display:flex;
   justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)}
 </style>
+
+
+<!-- ======================================================= arch · the system -->
+<section class="slide" id="arch">
+  <div class="head"><b>Architecture</b><span>the model proposes &middot; it never authorises</span></div>
+  <h1>One boundary, and what sits outside it</h1>
+  <div class="zones">
+    <div class="band" id="zSrc" style="flex:0 0 auto"><u>Source &middot; synthetic only</u>
+      <div class="items">
+        <span class="chip">Synthetic site adapter<small>fixture_source.py &middot; no live system</small></span>
+      </div>
+    </div>
+
+    <div class="band graph" id="zGraph"><u>Bounded Strands graph &middot; the only place a model runs</u>
+      <div class="items">
+        <span class="chip">Situation<small>SituationSummary</small></span>
+        <span class="chip">Reliability<small>ConstraintSet</small></span>
+        <span class="chip">Operations<small>ConstraintSet</small></span>
+        <span class="chip">Risk &amp; HSE<small>RiskAssessment</small></span>
+        <span class="chip">Scenario planner<small>ScenarioSet</small></span>
+      </div>
+    </div>
+
+    <div class="band outside" id="zOut"><u>Outside the graph &middot; deterministic, and the only way to act</u>
+      <div class="items">
+        <span class="chip">Policy service<small>tier 0-4 &middot; no model call</small></span>
+        <span class="chip">Approval service<small>named role &middot; scoped &middot; expiring</small></span>
+        <span class="chip">Action gateway<small>policy, approval, idempotency key</small></span>
+        <span class="chip">Audit ledger<small>append-only</small></span>
+      </div>
+    </div>
+
+    <div class="gap"><i></i><span class="cut">no control path &middot; by design</span><i></i></div>
+
+    <div class="band zone0" id="zZero"><u>Zone 0 &middot; operational technology &middot; unreachable</u>
+      <div class="items">
+        <span class="chip">Programmable controllers</span>
+        <span class="chip">SCADA</span>
+        <span class="chip">Fleet dispatch</span>
+        <span class="chip">ERP &middot; CMMS</span>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>docs/architecture/diagrams/cairn-architecture.svg carries the detailed version</span>
+    <span>Simulation only</span></div>
+</section>
 
 <!-- ============================================================= A · the method -->
 <section class="slide" id="a">
@@ -231,6 +319,20 @@ window.revealAll = () => { for (let i = 1; i <= 5; i++) window.revealStep(i); };
 // Slide C is a split beat. The narration is about the correction, so the table holds
 // the first seconds alone; arriving with both at once says neither.
 window.revealFix = () => document.getElementById('fix')?.classList.add('show');
+
+// The architecture frame has three states, one per narration cue: the graph boundary,
+// then the services outside it, then Zone 0. Each dims what it is not about, because a
+// diagram that emphasises everything emphasises nothing.
+const BANDS = ['zSrc', 'zGraph', 'zOut', 'zZero'];
+window.archStep = (n) => {
+  const focus = { 1: ['zGraph'], 2: ['zOut'], 3: ['zZero'] }[n] || [];
+  BANDS.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('hot', focus.includes(id));
+    el.classList.toggle('dim', focus.length > 0 && !focus.includes(id));
+  });
+};
 // Select from the hash, and keep following it. Navigating to a different hash on the
 // same document does not re-run this script, which silently left the first slide up.
 const pick = () => { document.body.dataset.slide = (location.hash.slice(1) || 'a'); };

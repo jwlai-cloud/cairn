@@ -5,8 +5,8 @@ These are not subtitles. The narration carries the story; a caption states the c
 beat proves, so a judge watching muted, or at 360p on a phone, can still follow it. They
 are deliberately shorter than what is spoken.
 
-The three TOGAF frames get none. They carry their own text, and a caption over a slide is
-two captions arguing.
+The six slide frames get none - three architecture, three method. They carry their own
+text, and a caption over a slide is two captions arguing.
 
 Timings come from captures/narration.md, keyed by cue timecode. That file is the plan and
 edit.sh assembles the output to match it, so those times are the output times. Keying by
@@ -30,18 +30,17 @@ CUE = re.compile(r"^\|\s*(\d+):(\d{2})\s*\|\s*(\d+)s\s*\|")
 # Keyed by cue timecode. Two lines maximum; a third does not fit the safe area.
 CAPTIONS: dict[str, str] = {
     "0:00": "A decision layer for a mine shift.\nIt recommends. It never authorises.",
-    "0:22": "Synthetic scenario. Four systems, each correct.\nNone of them sees the combined decision.",
-    "0:43": "The decision loop. Agents interpret evidence.\nPolicy, approval and execution stay deterministic.",
-    "1:02": "A bounded Strands graph.\nFour specialists in parallel, not a chain of handovers.",
-    "1:22": "Each specialist returns a structured finding.\nEvidence and uncertainty travel with it.",
-    "1:42": "Fifteen minutes stale, and marked stale.\nTwo forecasts disagree, and both are kept.",
-    "1:58": "Three options, each giving up something different.\nA visible trade-off, with evidence behind it.",
-    "2:17": "DENIED by a deterministic policy service.\nNo model call. Nothing to talk past.",
-    "2:41": "Approval bound to a named role and this plan version.\nExpiring, and good exactly once.",
-    "3:00": "Timed out after the call may have applied.\nHeld UNKNOWN. A blind retry is refused.",
-    # 3:24, 3:48 and 4:13 are the TOGAF frames. They carry their own text.
-    "4:27": "Event, evidence, findings, policy,\napproval, action, outcome.",
-    "4:38": "It recommends. It does not authorise.",
+    "0:17": "Synthetic scenario. Four systems, each correct.\nNone of them sees the combined decision.",
+    "0:34": "The decision loop. Agents interpret evidence.\nPolicy, approval and execution stay deterministic.",
+    "0:51": "A bounded Strands graph.\nFour specialists in parallel, not a chain of handovers.",
+    "1:08": "Each specialist returns a structured finding.\nEvidence and uncertainty travel with it.",
+    "1:26": "Fifteen minutes stale, and marked stale.\nTwo forecasts disagree, and both are kept.",
+    "1:40": "Three options, each giving up something different.\nA visible trade-off, with evidence behind it.",
+    "1:57": "DENIED by a deterministic policy service.\nNo model call. Nothing to talk past.",
+    "2:14": "Approval bound to a named role and this plan version.\nExpiring, and good exactly once.",
+    "2:28": "Timed out after the call may have applied.\nHeld UNKNOWN. A blind retry is refused.",
+    "4:32": "Event, evidence, findings, policy,\napproval, action, outcome.",
+    "4:42": "It recommends. It does not authorise.",
 }
 
 WIDTH, HEIGHT = 3840, 2400

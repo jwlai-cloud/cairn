@@ -1,1 +1,1 @@
-{"specialists": [["Situation", "SituationSummary"], ["Reliability", "ConstraintSet"], ["Operations", "ConstraintSet"], ["Risk", "RiskAssessment"]], "planner": ["Scenario Planner", "ScenarioSet"]}
+{"specialists": [["Situation", "SituationSummary", "4 tools"], ["Reliability", "ConstraintSet", "3 tools"], ["Operations", "ConstraintSet", "3 tools"], ["Risk", "RiskAssessment", "3 tools"]], "planner": ["Scenario Planner", "ScenarioSet", "no tools of its own"]}
