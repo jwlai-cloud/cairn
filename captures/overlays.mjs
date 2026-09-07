@@ -13,7 +13,7 @@ export const HIGHLIGHT_CSS = `
 #cap-dim.on{opacity:1}
 #cap-ring{position:fixed;z-index:9001;pointer-events:none;border:2px solid #E2542C;
   box-shadow:0 0 0 1px rgba(226,84,44,.35),0 0 26px rgba(226,84,44,.30);
-  opacity:0;transition:opacity .45s ease,left .5s ease,top .5s ease,width .5s ease,height .5s ease}
+  opacity:0;transition:opacity .45s ease,left .22s ease,top .22s ease,width .22s ease,height .22s ease}
 #cap-ring.on{opacity:1}
 #cap-ring::after{content:'';position:absolute;inset:-7px;border:1px solid rgba(226,84,44,.28)}
 `;
@@ -33,9 +33,14 @@ export const HIGHLIGHT_JS = () => {
   // measured target at y=1147 put the ring at y=1705. Divide the measurement back.
   const zoom = () => parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
 
-  window.capHighlight = (selector) => {
-    const el = document.querySelector(selector);
-    if (!el) return false;
+  // The ring follows its target instead of being measured once. A single beat can change
+  // the element under it several times - the reliability drill swaps the toast three
+  // times, from OUTCOME UNKNOWN to RETRY REFUSED to RECONCILED - and each has different
+  // content and so different dimensions. Measured once, the ring ends up sized for the
+  // first one and the later text spills out of it.
+  let tracking = null;
+
+  const place = (el) => {
     const r = el.getBoundingClientRect();
     const z = zoom();
     const box = {
@@ -55,10 +60,24 @@ export const HIGHLIGHT_JS = () => {
       ${box.x}px ${box.y}px)`;
     dim.classList.add('on');
     ring.classList.add('on');
+  };
+
+  window.capHighlight = (selector) => {
+    const first = document.querySelector(selector);
+    if (!first) return false;
+    place(first);
+    if (tracking) cancelAnimationFrame(tracking);
+    const follow = () => {
+      const el = document.querySelector(selector);
+      if (el) place(el);
+      tracking = requestAnimationFrame(follow);
+    };
+    tracking = requestAnimationFrame(follow);
     return true;
   };
 
   window.capClear = () => {
+    if (tracking) { cancelAnimationFrame(tracking); tracking = null; }
     dim.classList.remove('on');
     ring.classList.remove('on');
   };
