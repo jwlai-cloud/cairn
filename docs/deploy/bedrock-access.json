@@ -1,0 +1,19 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "InvokeThroughCrossRegionInferenceProfiles",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:*:034355008385:inference-profile/us.*",
+        "arn:aws:bedrock:us-east-1::foundation-model/*",
+        "arn:aws:bedrock:us-east-2::foundation-model/*",
+        "arn:aws:bedrock:us-west-2::foundation-model/*"
+      ]
+    }
+  ]
+}
