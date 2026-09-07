@@ -325,6 +325,11 @@ function renderButtons() {
   const hasEvents = view.events.length > 0;
   const analysed = view.scenarios.length > 0;
   const approval = view.approval;
+  const unknown = view.actions.some((a) => a.status === 'UNKNOWN');
+
+  // The reliability drill only makes sense once something is approved but not yet done.
+  $('btnTimeout').hidden = !(approval?.status === 'APPROVED' && !unknown);
+  $('btnReconcile').hidden = !unknown;
   $('btnInject').disabled = view.events.length >= 5;
   $('btnInjectAll').disabled = view.events.length >= 5;
   $('btnAnalyse').disabled = !hasEvents || analysed;
@@ -373,6 +378,44 @@ async function approveStep() {
   }
 }
 
+async function simulateTimeout() {
+  const ok = await refresh(call('/v1/actions/timeout', { method: 'POST' }));
+  if (ok) {
+    const unknown = ok.actions.filter((a) => a.status === 'UNKNOWN');
+    toast('OUTCOME UNKNOWN', `The dispatch system timed out after the call may already have applied. `
+      + `${unknown.length} action(s) held in UNKNOWN rather than retried.`,
+      { actionIds: unknown.map((a) => a.actionId).join(', '), requiresReconciliation: true }, 'deny');
+  }
+}
+
+async function retryBlindly() {
+  try {
+    await call('/v1/actions', { method: 'POST' });
+    toast('UNEXPECTED', 'A blind retry was allowed. This is a defect.', null, 'deny');
+  } catch (err) {
+    toast('RETRY REFUSED', err.message,
+      { ...err.details, note: 'an action that may already have applied is never retried' }, 'deny');
+  }
+  view = await call('/v1/runs/current');
+  render();
+}
+
+async function reconcile() {
+  // Every unresolved action has to be closed out, not just the first: a plan can leave
+  // more than one call in doubt, and a half-reconciled plan is still an open question.
+  const unknown = view.actions.filter((a) => a.status === 'UNKNOWN');
+  if (!unknown.length) return;
+  let ok = null;
+  for (const action of unknown) {
+    ok = await refresh(call(`/v1/actions/${action.actionId}/reconcile`,
+      { method: 'POST', body: { applied: true } }));
+    if (!ok) return;
+  }
+  toast('RECONCILED', `${unknown.length} action(s) confirmed applied by the dispatch system. `
+    + 'UNKNOWN → RECONCILING → SUCCEEDED.',
+    { actionIds: unknown.map((a) => a.actionId).join(', ') }, 'ok');
+}
+
 async function attemptProhibited() {
   try {
     await call('/v1/actions/prohibited', { method: 'POST', body: { actionType: 'OVERRIDE_SAFETY_INTERLOCK' } });
@@ -417,6 +460,9 @@ $('btnInjectAll').onclick = () => refresh(call('/v1/events', { method: 'POST' })
 $('btnAnalyse').onclick = () => refresh(call('/v1/runs/current/analyse', { method: 'POST' }));
 $('btnApprove').onclick = approveStep;
 $('btnProhibited').onclick = attemptProhibited;
+$('btnTimeout').onclick = simulateTimeout;
+$('btnReconcile').onclick = reconcile;
+$('btnReconcile').oncontextmenu = (e) => { e.preventDefault(); retryBlindly(); };
 $('btnAudit').onclick = openAudit;
 $('btnCloseAudit').onclick = () => { $('auditDrawer').hidden = true; };
 $('btnReset').onclick = async () => {

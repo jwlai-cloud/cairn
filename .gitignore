@@ -18,3 +18,10 @@ sessions/local/
 *.sqlite3
 *.db
 .DS_Store
+
+# Demo video captures and their intermediates: large, regenerable, and not source.
+captures/
+*.webm
+*.mp4
+*.mov
+node_modules/
