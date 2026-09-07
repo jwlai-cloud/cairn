@@ -116,6 +116,23 @@ docs/architecture/ the architecture pack and ADRs
 | `fixture` (default) | `uvicorn app.api.main:app` | none | byte-identical replay |
 | `bedrock` | `CAIRN_MODE=bedrock uvicorn app.api.main:app` | AWS + Bedrock model access | not guaranteed |
 
+Bedrock mode needs a **tool-capable** model, not a specific vendor — the agent boundary is a Pydantic contract,
+so anything that can call a tool will do. By default CAIRN asks the account what it has and takes the best of it,
+ranked newest-first, rather than pinning an id that goes stale the day a better model ships:
+
+```bash
+CAIRN_MODE=bedrock uvicorn app.api.main:app                       # discover the best available
+CAIRN_MODE=bedrock CAIRN_BEDROCK_MODEL_ID=us.amazon.nova-lite-v1:0 \
+  CAIRN_BEDROCK_REGION=us-east-1 uvicorn app.api.main:app         # or choose explicitly
+```
+
+Discovery needs `bedrock:ListFoundationModels` and `bedrock:ListInferenceProfiles`. Without them it logs a
+warning and falls back, so a locked-down account fails with a clear `AccessDenied` at invoke time rather than
+a confusing empty result at startup.
+
+One full graph run is roughly 15k input and 3.6k output tokens across 11 model calls, so the choice of model is
+a cost decision rather than a capability one.
+
 Fixture mode is not a mock of the agent layer. It is a real Strands `Graph` of real `Agent` nodes with structured-output enforcement; only the model *provider* is deterministic.
 
 It is also not a constant. Strands' `Graph` delivers each upstream node's structured output to its dependants as JSON in the request messages; `FixtureModel` parses that transport and runs a reducer over it (`app/agents/reducers.py`), so **every node's output is a function of its inputs**. Delete the risk agent's hazards and the route closures disappear; raise a hazard's severity and the recommendation flips from *Recover tonnes* to *Protect safety*; remove the maintenance constraint and the preserve option's recovery time drops. `tests/evaluation/test_graph_dataflow.py` asserts all of it — those tests fail if the nodes stop reading each other.

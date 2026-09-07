@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 
 from app.agents.context import GraphContext
-from app.agents.graph import PLANNER, SPECIALISTS, run_graph
+from app.agents.graph import PLANNER, SPECIALISTS, resolve_model_id_for, run_graph
 from app.audit.ledger import AuditLedger
 from app.domain.models import (
     MODEL_ID_FIXTURE,
@@ -98,6 +98,8 @@ class Run:
     recommended_scenario_id: str | None = None
     recommendation_reason: str = ""
     would_change_if: str = ""
+    # Set from the graph result, so the audit names the model that actually ran.
+    model_id: str = MODEL_ID_FIXTURE
     gateway: ActionGateway = field(init=False)
     reads: ReadTools = field(init=False)
 
@@ -166,12 +168,15 @@ class Run:
         if not self.injected_event_ids:
             raise ValueError("No events have been injected; nothing to analyse.")
         self.status = RunStatus.RUNNING
+        # Resolve up front so the GRAPH_STARTED entry names the model that is about to
+        # run, rather than the default it would otherwise still be holding.
+        self.model_id = resolve_model_id_for(self.mode)
         self.ledger.record(
             "GRAPH_STARTED",
             "cairn-supervisor",
             f"Bounded graph invoked over {len(self.events)} correlated events.",
             promptVersion=PROMPT_VERSION,
-            modelId=MODEL_ID_FIXTURE if self.mode == "fixture" else "bedrock",
+            modelId=self.model_id,
             nodes=[s.node_id for s in (*SPECIALISTS, PLANNER)],
         )
 
@@ -186,6 +191,7 @@ class Run:
             f"Compound disruption on Shift A at North Pit. Signals: {titles}", context, self.mode
         )
         self.outputs = result.outputs
+        self.model_id = result.model_id
 
         started = utcnow()
         for spec in (*SPECIALISTS, PLANNER):
@@ -679,7 +685,7 @@ class Run:
             site_id=self.source.site_model().site_id,
             status=self.status,
             mode=self.mode,
-            model_id=MODEL_ID_FIXTURE if self.mode == "fixture" else "bedrock",
+            model_id=self.model_id,
             site=self.site_with_states(),
             kpi=self.kpi(),
             baseline_kpi=self.source.baseline_kpi(),
