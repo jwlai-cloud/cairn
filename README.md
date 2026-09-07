@@ -117,14 +117,18 @@ docs/architecture/ the architecture pack and ADRs
 | `bedrock` | `CAIRN_MODE=bedrock uvicorn app.api.main:app` | AWS + Bedrock model access | not guaranteed |
 
 Bedrock mode needs a **tool-capable** model, not a specific vendor — the agent boundary is a Pydantic contract,
-so anything that can call a tool will do. Point it at whatever the account has access to:
+so anything that can call a tool will do. By default CAIRN asks the account what it has and takes the best of it,
+ranked newest-first, rather than pinning an id that goes stale the day a better model ships:
 
 ```bash
-CAIRN_MODE=bedrock \
-CAIRN_BEDROCK_MODEL_ID=us.amazon.nova-lite-v1:0 \
-CAIRN_BEDROCK_REGION=us-east-1 \
-uvicorn app.api.main:app
+CAIRN_MODE=bedrock uvicorn app.api.main:app                       # discover the best available
+CAIRN_MODE=bedrock CAIRN_BEDROCK_MODEL_ID=us.amazon.nova-lite-v1:0 \
+  CAIRN_BEDROCK_REGION=us-east-1 uvicorn app.api.main:app         # or choose explicitly
 ```
+
+Discovery needs `bedrock:ListFoundationModels` and `bedrock:ListInferenceProfiles`. Without them it logs a
+warning and falls back, so a locked-down account fails with a clear `AccessDenied` at invoke time rather than
+a confusing empty result at startup.
 
 One full graph run is roughly 15k input and 3.6k output tokens across 11 model calls, so the choice of model is
 a cost decision rather than a capability one.

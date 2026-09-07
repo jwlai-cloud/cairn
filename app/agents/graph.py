@@ -48,9 +48,10 @@ CORRELATION_ID = "corr_compound_disruption_v1"
 
 
 def _bedrock_model_id() -> str:
+    from app.agents.bedrock_models import resolve_model_id
     from app.config import settings
 
-    return settings.BEDROCK_MODEL_ID
+    return resolve_model_id(settings.BEDROCK_REGION, settings.BEDROCK_MODEL_ID)
 
 MAX_NODE_EXECUTIONS = 12
 EXECUTION_TIMEOUT_SECONDS = 90
@@ -131,8 +132,10 @@ def _model_for(spec: NodeSpec, ctx: GraphContext, mode: str):
 
         from app.config import settings
 
+        from app.agents.bedrock_models import resolve_model_id
+
         return BedrockModel(
-            model_id=settings.BEDROCK_MODEL_ID,
+            model_id=resolve_model_id(settings.BEDROCK_REGION, settings.BEDROCK_MODEL_ID),
             region_name=settings.BEDROCK_REGION,
             temperature=0.0,
         )
