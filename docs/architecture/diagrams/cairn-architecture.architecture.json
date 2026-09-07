@@ -283,7 +283,7 @@
     {
       "id": "human",
       "type": "external",
-      "label": "Shift Boss",
+      "label": "Shift Supervisor",
       "sublabel": "accountable approver",
       "tag": "human in the loop",
       "pos": [

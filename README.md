@@ -50,7 +50,7 @@ Every button is in the footer of the situation room. The scenario is determinist
 | 4 | Click a scenario card | Route overlays and affected assets update in the scene. Closed routes go grey and dashed. |
 | 5 | **Attempt interlock override** | Deterministic policy denial with rule ID, tier and `decidedBy: deterministic policy service (no model call)`. **The model can recommend; it cannot authorise.** |
 | 6 | **Request approval** | Policy escalates. A scoped, expiring approval is created for the named role. |
-| 7 | **Approve as SHIFT_BOSS** | A server-issued approval token is bound to the plan version and the evidence hash. |
+| 7 | **Approve as SHIFT_SUPERVISOR** | A server-issued approval token is bound to the plan version and the evidence hash. |
 | 8 | **Execute simulated action** | `SIM-` prefixed work order and shift instruction, each with an idempotency key. |
 | 9 | **Verify outcome** | Projected tonnes and crusher feed. Truck 204 is still down and residual risks stay open — the plan does not pretend the disruption is over. |
 | 10 | **Audit trace** | The full chain: source event → evidence → agent findings → scenario → policy decision → human approval → action request → outcome. |

@@ -6,9 +6,9 @@ from app.domain.run_service import Run, RunStore
 async def _golden(run: Run) -> Run:
     run.inject_all_events()
     await run.analyse()
-    run.request_approval("scn_recover_tonnes", actor_roles=["SHIFT_BOSS"])
-    run.decide_approval(approve=True, approver_id="user_shift_boss_01", approver_role="SHIFT_BOSS")
-    run.execute_approved_actions(actor_id="user_shift_boss_01", actor_roles=["SHIFT_BOSS"])
+    run.request_approval("scn_recover_tonnes", actor_roles=["SHIFT_SUPERVISOR"])
+    run.decide_approval(approve=True, approver_id="user_shift_supervisor_01", approver_role="SHIFT_SUPERVISOR")
+    run.execute_approved_actions(actor_id="user_shift_supervisor_01", actor_roles=["SHIFT_SUPERVISOR"])
     run.verify_outcome()
     return run
 

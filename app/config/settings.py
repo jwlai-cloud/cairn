@@ -13,8 +13,8 @@ MODE = os.getenv("CAIRN_MODE", "fixture")
 # A path makes the audit ledger durable across restarts (AR-15). Unset keeps the
 # in-memory store, which is what the tests and the deterministic replay want.
 AUDIT_DB = os.getenv("CAIRN_AUDIT_DB") or None
-ACTOR_ID = os.getenv("CAIRN_ACTOR_ID", "user_shift_boss_01")
-ACTOR_ROLES = tuple(os.getenv("CAIRN_ACTOR_ROLES", "SHIFT_BOSS,MAINTENANCE_PLANNER").split(","))
+ACTOR_ID = os.getenv("CAIRN_ACTOR_ID", "user_shift_supervisor_01")
+ACTOR_ROLES = tuple(os.getenv("CAIRN_ACTOR_ROLES", "SHIFT_SUPERVISOR,MAINTENANCE_PLANNER").split(","))
 
 # Bedrock mode only. CAIRN needs a tool-capable model, not a specific vendor: the agent
 # boundary is a Pydantic contract, so anything that can call a tool will do. Override to

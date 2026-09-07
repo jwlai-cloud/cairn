@@ -37,7 +37,7 @@ SEVERITY_ORDER = {Severity.LOW: 0, Severity.MEDIUM: 1, Severity.HIGH: 2, Severit
 RISK_PENALTY = {Severity.LOW: 0.10, Severity.MEDIUM: 0.35, Severity.HIGH: 0.80, Severity.CRITICAL: 1.50}
 
 TONNES_ROUNDING = 50
-NORMALISING_TONNES = 3000.0
+NORMALISING_TONNES = 8000.0
 NORMALISING_MINUTES = 150.0
 
 
@@ -455,12 +455,12 @@ OPTION_TEMPLATES: tuple[OptionTemplate, ...] = (
         scenario_id="scn_protect_safety",
         title="Protect safety",
         summary="Close the exposed ramp now, stand the exposed cycle down early, and accept the lower tonnes.",
-        tonnes_factor=248,
+        tonnes_factor=933,
         base_recovery_minutes=95,
         base_throughput_delta=-0.18,
         mitigates=("risk_ramp_closure", "risk_north_ramp_congestion", "risk_unplanned_crusher_outage"),
         requires=("cst_available_trucks",),
-        approvals=("SHIFT_BOSS",),
+        approvals=("SHIFT_SUPERVISOR",),
         actions=(ActionType.PUBLISH_SHIFT_INSTRUCTION,),
         confidence_factor=1.07,
         assumptions=("Crews can be repositioned within 15 minutes",),
@@ -473,12 +473,12 @@ OPTION_TEMPLATES: tuple[OptionTemplate, ...] = (
             "Close the exposed ramp at the control threshold, reroute the fleet to the alternate ramp, "
             "and draw the ROM stockpile buffer to keep the crusher fed."
         ),
-        tonnes_factor=552,
+        tonnes_factor=1448,
         base_recovery_minutes=60,
         base_throughput_delta=-0.06,
         mitigates=("risk_ramp_closure",),
         requires=("cst_north_ramp_capacity", "cst_stockpile_buffer", "cst_available_trucks"),
-        approvals=("SHIFT_BOSS",),
+        approvals=("SHIFT_SUPERVISOR",),
         actions=(ActionType.PUBLISH_SHIFT_INSTRUCTION, ActionType.CREATE_WORK_ORDER),
         confidence_factor=1.0,
         assumptions=("Second loader returns from refuel within 30 minutes for rehandle",),
@@ -491,12 +491,12 @@ OPTION_TEMPLATES: tuple[OptionTemplate, ...] = (
             "Cap crusher feed, close the exposed ramp, and queue the crusher inspection and the truck "
             "repair as the first jobs when the crew frees."
         ),
-        tonnes_factor=362,
+        tonnes_factor=1162,
         base_recovery_minutes=27,
         base_throughput_delta=-0.30,
         mitigates=("risk_ramp_closure", "risk_unplanned_crusher_outage"),
         requires=("cst_vibration_ceiling", "cst_available_trucks"),
-        approvals=("SHIFT_BOSS", "MAINTENANCE_PLANNER"),
+        approvals=("SHIFT_SUPERVISOR", "MAINTENANCE_PLANNER"),
         actions=(ActionType.CREATE_WORK_ORDER, ActionType.PUBLISH_SHIFT_INSTRUCTION),
         confidence_factor=0.97,
         assumptions=("Bearing vibration continues to trend rather than step",),
@@ -693,7 +693,7 @@ def _planner_headline(options: list[ScenarioOption], closed_routes: list[str]) -
 
 def _reason(recommended: ScenarioOption | None, runner_up: ScenarioOption | None, closed: list[str]) -> str:
     if recommended is None:
-        return "No option is feasible under the reported constraints; escalate to the shift boss."
+        return "No option is feasible under the reported constraints; escalate to the shift supervisor."
     parts = [f"Under the supplied weights, {recommended.title} scores highest"]
     if closed:
         parts.append("while respecting the binding route closure")

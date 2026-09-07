@@ -64,7 +64,7 @@ class ApprovalRequestBody(BaseModel):
 class ApprovalDecisionBody(BaseModel):
     approve: bool
     approverId: str = settings.ACTOR_ID
-    approverRole: str = "SHIFT_BOSS"
+    approverRole: str = "SHIFT_SUPERVISOR"
 
 
 class ProhibitedActionBody(BaseModel):

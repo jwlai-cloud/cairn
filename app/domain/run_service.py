@@ -355,7 +355,7 @@ class Run:
                 approvalId=self.approval.approval_id,
             )
         self.ledger.record(
-            "SCENARIO_SELECTED", "user_shift_boss_01", f"{option.title} selected for review.", scenarioId=scenario_id
+            "SCENARIO_SELECTED", "user_shift_supervisor_01", f"{option.title} selected for review.", scenarioId=scenario_id
         )
         return option
 
