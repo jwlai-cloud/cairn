@@ -45,7 +45,7 @@ CAPTIONS: list[str | None] = [
     "Approval bound to a named role and this plan version.\nExpiring, and good exactly once.",
     "Timed out after the call may have applied.\nHeld UNKNOWN. A blind retry is refused.",
     None, None, None,          # architecture frames
-    None, None, None,          # method frames
+    None, None,                # method frames
     "Event, evidence, findings, policy,\napproval, action, outcome.",
     "It recommends. It does not authorise.",
 ]

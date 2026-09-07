@@ -1,7 +1,7 @@
 # Narration cue sheet
 
-Runtime **4:30** against a 5:00 cap. Eighteen cues, 831 spoken words,
-30 seconds of headroom.
+Runtime **4:19** against a 5:00 cap. Seventeen cues,
+41 seconds of headroom.
 
 ## What changed, and why
 
@@ -84,14 +84,13 @@ beat; when one does, cut a sentence rather than speaking faster.
 | 3:09 | 16s | slide | Zone 0 at the base, struck through and unreachable. | Zone 0 | And at the bottom, the systems a mine actually runs on. Programmable controllers, SCADA, dispatch. They are drawn unreachable because they are unreachable. CAIRN has no control path to operational technology at all. Every artefact it produces is a proposal for a person to act on. |
 | 3:25 | 18s | slide | TOGAF ADM view, then the traceability chain | - | TOGAF is what helped us turn these controls into an architecture instead of a collection of prompts. We started with stakeholder concerns, turned them into principles and requirements, mapped those requirements to building blocks, and connected each one to a test. It is a chain of accountability, from the question someone asks to the behaviour the system must prove. |
 | 3:43 | 18s | slide | Animate the safety question through each artefact view | each link in turn | Take the safety question on screen. Can CAIRN waive a safety control? The answer becomes a principle: no direct control path to operational technology. That becomes a requirement: high-consequence actions are denied for every role. It becomes a policy service in the architecture, and a test that fails if a model is ever consulted. |
-| 4:01 | 11s | slide | Requirements table, test-id column | test-id column | That discipline even caught an inconsistency in our own synthetic scenario. The shift target did not line up with the fleet capacity we had declared. We corrected it before it became a misleading demo. |
 
 ## Close - the audit trail, then the thesis
 
 | Cue | Hold | Source | Screen | Highlight | Narration |
 |---|---|---|---|---|---|
-| 4:12 | 9s | app | Open the audit trace. Scroll the chain: event, evidence, findings, policy, approval, action, outcome. | `.audit` | Every behaviour you have seen here is covered by tests. CAIRN does not replace fleet management, plant control, or the systems a mine already trusts. |
-| 4:21 | 9s | app | Close the drawer. The room, reset and quiet, trucks running. | - | It connects them when a decision crosses boundaries, keeps authority with people, and leaves a record of what happened. It recommends. It does not authorise. |
+| 4:01 | 9s | app | Open the audit trace. Scroll the chain: event, evidence, findings, policy, approval, action, outcome. | `.audit` | Every behaviour you have seen here is covered by tests. CAIRN does not replace fleet management, plant control, or the systems a mine already trusts. |
+| 4:10 | 9s | app | Close the drawer. The room, reset and quiet, trucks running. | - | It connects them when a decision crosses boundaries, keeps authority with people, and leaves a record of what happened. It recommends. It does not authorise. |
 
 ## Recording it
 

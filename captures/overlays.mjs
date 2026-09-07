@@ -8,7 +8,7 @@
  * chamfered target stays readable at its own edges.
  */
 export const HIGHLIGHT_CSS = `
-#cap-dim{position:fixed;inset:0;z-index:9000;pointer-events:none;background:rgba(8,10,14,.72);
+#cap-dim{position:fixed;inset:0;z-index:9000;pointer-events:none;background:rgba(8,10,14,.30);
   opacity:0;transition:opacity .45s ease}
 #cap-dim.on{opacity:1}
 #cap-ring{position:fixed;z-index:9001;pointer-events:none;border:2px solid #E2542C;
@@ -16,6 +16,10 @@ export const HIGHLIGHT_CSS = `
   opacity:0;transition:opacity .45s ease,left .22s ease,top .22s ease,width .22s ease,height .22s ease}
 #cap-ring.on{opacity:1}
 #cap-ring::after{content:'';position:absolute;inset:-7px;border:1px solid rgba(226,84,44,.28)}
+.cap-press{position:fixed;z-index:9002;pointer-events:none;border:2px solid #E2542C;
+  background:rgba(226,84,44,.14);opacity:0;transform:scale(.94);
+  transition:opacity .18s ease,transform .18s ease}
+.cap-press.on{opacity:1;transform:scale(1)}
 `;
 
 export const HIGHLIGHT_JS = () => {
@@ -73,6 +77,25 @@ export const HIGHLIGHT_JS = () => {
       tracking = requestAnimationFrame(follow);
     };
     tracking = requestAnimationFrame(follow);
+    return true;
+  };
+
+  // Flash a control so the click has a visible cause. Kept separate from the spotlight,
+  // because the point is the button, not the surrounding page.
+  window.capPress = (selector) => {
+    const el = document.querySelector(selector);
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    const z = zoom();
+    const f = document.createElement('div');
+    f.className = 'cap-press';
+    Object.assign(f.style, {
+      left: `${(r.left - 6) / z}px`, top: `${(r.top - 6) / z}px`,
+      width: `${(r.width + 12) / z}px`, height: `${(r.height + 12) / z}px`,
+    });
+    document.body.append(f);
+    requestAnimationFrame(() => f.classList.add('on'));
+    setTimeout(() => f.remove(), 1600);
     return true;
   };
 

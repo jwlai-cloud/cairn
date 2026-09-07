@@ -1,73 +1,73 @@
 [
   {
-    "at": 2.449,
-    "seconds": 22.002000000000002,
+    "at": 2.529,
+    "seconds": 17.002,
     "section": "pre",
     "label": "Normal shift, trucks running, CAIRN quiet"
   },
   {
-    "at": 24.451,
-    "seconds": 21.000999999999998,
+    "at": 19.531,
+    "seconds": 16,
     "section": "pre",
     "label": "Crusher, truck and weather events land"
   },
   {
-    "at": 45.456,
-    "seconds": 19.00699999999999,
+    "at": 35.532,
+    "seconds": 17.001000000000005,
     "section": "pre",
     "label": "The decision spine at rest"
   },
   {
-    "at": 64.463,
-    "seconds": 20.001000000000005,
+    "at": 52.533,
+    "seconds": 16.001000000000005,
     "section": "pre",
     "label": "Strands graph fills, four specialists in parallel"
   },
   {
-    "at": 84.464,
-    "seconds": 20.001000000000005,
+    "at": 68.534,
+    "seconds": 17.134,
     "section": "pre",
     "label": "Typed findings cross the edges: the fan-in, over the live room"
   },
   {
-    "at": 104.466,
-    "seconds": 16,
+    "at": 85.669,
+    "seconds": 13,
     "section": "pre",
     "label": "Stale telemetry and a source conflict, both surfaced"
   },
   {
-    "at": 120.467,
-    "seconds": 19.00099999999999,
+    "at": 98.671,
+    "seconds": 15.001999999999995,
     "section": "pre",
     "label": "Three options, then the recommended plan and its route"
   },
   {
-    "at": 139.469,
-    "seconds": 24,
+    "at": 113.675,
+    "seconds": 15.001999999999995,
     "section": "pre",
     "label": "DENIED by deterministic policy, no model call"
   },
   {
-    "at": 163.47,
-    "seconds": 19.00200000000001,
+    "at": 128.678,
+    "seconds": 12.001000000000005,
     "section": "pre",
     "label": "Scoped approval: named role, plan version, single use"
   },
   {
-    "at": 182.473,
-    "seconds": 24.00199999999998,
+    "at": 140.681,
+    "seconds": 18.000999999999976,
     "section": "pre",
     "label": "Timeout to UNKNOWN, blind retry refused, then reconciled"
   },
   {
-    "at": 206.477,
-    "seconds": 11.00399999999999,
+    "at": 158.685,
+    "seconds": 9,
     "section": "post",
     "label": "The chain: event, evidence, findings, policy, approval, action, outcome"
   },
   {
-    "at": 217.484,
-    "seconds": 10.001999999999981,
+    "at": 167.687,
+    "seconds": 9.002999999999986,
     "section": "post",
     "label": "The room, reset and quiet"
   }

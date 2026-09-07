@@ -24,11 +24,12 @@ const slideHolds = readFileSync(SHEET, 'utf8')
   .map((l) => l.match(/^\|\s*(\d+):(\d\d)\s*\|\s*(\d+)s\s*\|\s*slide\s*\|/))
   .filter(Boolean)
   .map((m) => Number(m[3]));
-if (slideHolds.length !== 6) {
-  throw new Error(`expected 6 slide cues in the sheet, found ${slideHolds.length}`);
+if (slideHolds.length !== 5) {
+  throw new Error(`expected 5 slide cues in the sheet, found ${slideHolds.length}`);
 }
-// arch has three states, then the three method frames.
-const [A1, A2, A3, HA, HB, HC] = slideHolds;
+// Three architecture states, then two method frames. The correction frame was cut: a
+// demo spending eleven seconds on a mistake we caught is a process anecdote, not value.
+const [A1, A2, A3, HA, HB] = slideHolds;
 const B_STEPS = [0, 5, 10, 15, 20];
 
 const browser = await chromium.launch({ args: ['--hide-scrollbars'] });
@@ -54,7 +55,7 @@ for (const [i, hold] of [A1, A2, A3].entries()) {
   }
 }
 
-for (const slide of ['a', 'b', 'c']) {
+for (const slide of ['a', 'b']) {
   await page.goto(`${PAGE}#${slide}`, { waitUntil: 'load' });
   // Set it directly too: a hash-only navigation does not re-run the page script, so
   // relying on goto alone captured the first slide three times.
@@ -75,18 +76,8 @@ for (const slide of ['a', 'b', 'c']) {
       await page.evaluate(() => window.revealAll());
       await page.waitForTimeout(700);
     }
-  } else if (slide === 'c') {
-    // Split beat: table alone, then the correction. Six seconds, per the review.
-    if (VIDEO) {
-      await page.waitForTimeout(6000);
-      await page.evaluate(() => window.revealFix());
-      await page.waitForTimeout((HC - 6) * 1000);
-    } else {
-      await page.evaluate(() => window.revealFix());
-      await page.waitForTimeout(700);
-    }
   } else if (VIDEO) {
-    await page.waitForTimeout(({ a: HA, b: HB, c: HC })[slide] * 1000);
+    await page.waitForTimeout(({ a: HA, b: HB })[slide] * 1000);
   }
 
   if (!VIDEO) await page.screenshot({ path: `${OUT}../docs/design/togaf-${slide}.png` });

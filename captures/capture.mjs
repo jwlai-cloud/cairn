@@ -71,6 +71,16 @@ async function cue(page, section, label, fn) {
 // resolves later, and highlighting a hidden element measures a zero-sized rect: the ring
 // lands in the top-left corner and the thing being discussed gets dimmed instead. That
 // happened on the denial beat, which is the worst possible place for it.
+// Press a control visibly: flash it, let the viewer see it, then click. Without this the
+// capture clicks silently and a toast appears at the bottom of the screen with no visible
+// cause, which is what made the demo confusing to watch.
+const press = async (page, sel) => {
+  await page.locator(sel).first().waitFor({ state: 'visible', timeout: 15000 });
+  await page.evaluate((x) => window.capPress(x), sel);
+  await wait(page, 900);
+  await page.click(sel);
+};
+
 const hl = async (page, sel) => {
   await page.locator(sel).first().waitFor({ state: 'visible', timeout: 15000 });
   await page.evaluate((s) => window.capHighlight(s), sel);
@@ -107,7 +117,7 @@ await cue(page, 'pre', 'Normal shift, trucks running, CAIRN quiet');
 
 // 0:22 · the decision window
 await cue(page, 'pre', 'Crusher, truck and weather events land', async () => {
-  await page.click('#btnInjectAll');
+  await press(page, '#btnInjectAll');
   await hl(page, '#timeline');
 });
 await clear(page);
@@ -144,39 +154,44 @@ await clear(page);
 
 // 1:58 · options, not a magic answer
 await cue(page, 'pre', 'Three options, then the recommended plan and its route', async () => {
+  const opts = APP_HOLDS[cueIndex - 1] * 1000;
   await hl(page, '#scenarioCards');
-  await page.click('[data-scenario="scn_protect_safety"]');
-  await wait(page, 4500);
-  await page.click('[data-scenario="scn_preserve_equipment"]');
-  await wait(page, 4500);
-  await page.click('[data-scenario="scn_recover_tonnes"]');
+  await press(page, '[data-scenario="scn_protect_safety"]');
+  await wait(page, opts * 0.22);
+  await press(page, '[data-scenario="scn_preserve_equipment"]');
+  await wait(page, opts * 0.22);
+  await press(page, '[data-scenario="scn_recover_tonnes"]');
 });
 await clear(page);
 
 // 2:17 · where the system draws the line
 await cue(page, 'pre', 'DENIED by deterministic policy, no model call', async () => {
-  await page.click('#btnProhibited');
+  await press(page, '#btnProhibited');
   await hl(page, '#toast');
 });
 await clear(page);
 
 // 2:41 · a person has to sign
 await cue(page, 'pre', 'Scoped approval: named role, plan version, single use', async () => {
-  await page.click('#btnApprove');
-  await wait(page, 5000);
-  await page.click('#btnApprove');
+  const appr = APP_HOLDS[cueIndex - 1] * 1000;
+  await press(page, '#btnApprove');
+  await wait(page, appr * 0.32);
+  await press(page, '#btnApprove');
   await hl(page, '#toast');
 });
 await clear(page);
 
 // 3:00 · when the world misbehaves
 await cue(page, 'pre', 'Timeout to UNKNOWN, blind retry refused, then reconciled', async () => {
-  await page.click('#btnTimeout');
+  // Proportions again: three actions at 0.9s of press affordance each, plus two reads,
+  // has to fit whatever hold the sheet declares for this beat.
+  const drill = APP_HOLDS[cueIndex - 1] * 1000;
+  await press(page, '#btnTimeout');
   await hl(page, '#toast');
-  await wait(page, 9000);
+  await wait(page, drill * 0.40);
   await page.locator('#btnReconcile').click({ button: 'right' });
-  await wait(page, 7000);
-  await page.click('#btnReconcile');
+  await wait(page, drill * 0.32);
+  await press(page, '#btnReconcile');
 });
 await clear(page);
 
@@ -186,9 +201,9 @@ await clear(page);
 // 4:27 · the audit trail. One of the two moments a viewer should carry away.
 await cue(page, 'post', 'The chain: event, evidence, findings, policy, approval, action, outcome',
   async () => {
-    await page.click('#btnAudit');
+    await press(page, '#btnAudit');
     await hl(page, '.audit');
-    await wait(page, 4000);
+    await wait(page, APP_HOLDS[cueIndex - 1] * 1000 * 0.30);
     await page.evaluate(() => {
       const el = document.querySelector('.audit');
       if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
