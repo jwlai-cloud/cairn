@@ -24,15 +24,23 @@ import sys
 import tempfile
 
 HERE = pathlib.Path(__file__).parent
-ROW = re.compile(r"^\|\s*(\d+):(\d{2})\s*\|\s*(\d+)s\s*\|[^|]*\|\s*(.+?)\s*\|\s*$")
+# A cue row opens with a timecode and a hold; the spoken line is always the last cell,
+# so the columns in between (screen action, highlight target) can change freely.
+CUE = re.compile(r"^\s*(\d+):(\d{2})\s*$")
+HOLD = re.compile(r"^\s*(\d+)s\s*$")
 
 
 def cues(path: pathlib.Path) -> list[tuple[float, int, str]]:
     out = []
     for line in path.read_text().splitlines():
-        m = ROW.match(line)
-        if m:
-            out.append((int(m[1]) * 60 + int(m[2]), int(m[3]), m[4]))
+        if not line.startswith("|"):
+            continue
+        cells = line.split("|")[1:-1]
+        if len(cells) < 3:
+            continue
+        at, hold = CUE.match(cells[0]), HOLD.match(cells[1])
+        if at and hold:
+            out.append((int(at[1]) * 60 + int(at[2]), int(hold[1]), cells[-1].strip()))
     return out
 
 
