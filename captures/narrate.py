@@ -13,7 +13,7 @@ sentence, not to talk faster.
 macOS `say` is the floor, not the plan: a synthesised track reads as a project that ran
 out of time. Record a human take over the same cue sheet when there is any chance to.
 
-    python3 captures/narrate.py [out.wav] [--voice 'Lee (Premium)'] [--rate 160]
+    python3 captures/narrate.py [out.wav] [--voice Samantha] [--rate 160]
 """
 import argparse
 import json
@@ -55,7 +55,7 @@ def duration(path: pathlib.Path) -> float:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("out", nargs="?", default="captures/narration.wav")
-    ap.add_argument("--voice", default="Lee (Premium)")
+    ap.add_argument("--voice", default="Samantha")
     ap.add_argument("--rate", type=int, default=160)
     ap.add_argument("--script", default=str(HERE / "narration.md"))
     ap.add_argument("--beats", default=str(HERE / "beats.json"))

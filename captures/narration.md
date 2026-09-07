@@ -22,8 +22,7 @@ Three faults the revision caught that mattered more than voice:
 
 Changes made to the revision, and why:
 
-- "per cent" rather than "percent", and "handovers" rather than "hand-offs", to match the
-  Australian site the fixture describes.
+- "handovers" rather than "hand-offs", which is ordinary usage in shift operations.
 - Em dashes replaced with commas or colons, and sentences split, per the technical-writing
   standard.
 - Its closing line, "when the shift changes, it can show us whether the decision actually
@@ -46,7 +45,7 @@ rather than speaking faster.
 | Cue | Hold | Screen | Highlight | Narration |
 |---|---|---|---|---|
 | 0:00 | 22s | Normal shift. Trucks move through the pit. CAIRN visible but quiet. | - | This is CAIRN. In a mine shift, the difficult decisions rarely come from one alarm. They happen when several changes arrive together, across different systems, and nobody has time to assemble the whole picture. CAIRN brings those signals together, tests the options, and helps a supervisor recover the shift safely. |
-| 0:22 | 21s | Crusher, truck and weather events land. Timeline begins. | `#timeline` | Everything in this demo is synthetic, but the situation is familiar. The crusher is running at seventy-five per cent. A haul truck has stopped. Rain will close the main ramp in forty-two minutes. Each source knows one fact. CAIRN sees one operational problem, and a decision window that is already closing. |
+| 0:22 | 21s | Crusher, truck and weather events land. Timeline begins. | `#timeline` | Everything in this demo is synthetic, but the situation is familiar. The crusher is running at seventy-five percent. A haul truck has stopped. Rain will close the main ramp in forty-two minutes. Each source knows one fact. CAIRN sees one operational problem, and a decision window that is already closing. |
 | 0:43 | 19s | The decision spine on the left | `.spine` | That is the idea behind the spine on the left. It is the decision loop: understand the situation, work out the choices, check the risks, then decide and verify. You can also see where the AI stops. Agents help interpret evidence. Policy, approval and execution stay deterministic and accountable. |
 
 ## Act 2 - why Strands
