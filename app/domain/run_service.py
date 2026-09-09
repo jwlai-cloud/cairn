@@ -103,12 +103,17 @@ class Run:
     recommended_scenario_id: str | None = None
     recommendation_reason: str = ""
     would_change_if: str = ""
-    # Set from the graph result, so the audit names the model that actually ran.
+    # Resolved in __post_init__ from the mode, then replaced by the graph result so the
+    # audit names the model that actually ran. It must not default to the fixture id: the
+    # header renders this beside the mode, and in bedrock mode before the first analysis
+    # it read "mode bedrock, cairn-fixture-deterministic-v1" - a contradiction, and the
+    # first thing anyone looks at.
     model_id: str = MODEL_ID_FIXTURE
     gateway: ActionGateway = field(init=False)
     reads: ReadTools = field(init=False)
 
     def __post_init__(self) -> None:
+        self.model_id = resolve_model_id_for(self.mode)
         self.ledger = AuditLedger(CORRELATION_ID, store=self.audit_store)
         self.gateway = ActionGateway(policy=self.policy, ledger=self.ledger)
         self.reads = ReadTools(self.source)
