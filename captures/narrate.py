@@ -16,10 +16,22 @@ only its own beat instead of pushing every later line out of sync with the pictu
 Overruns are reported rather than silently trimmed, because the fix is to cut the
 sentence, not to talk faster.
 
-macOS `say` is the floor, not the plan: a synthesised track reads as a project that ran
-out of time. Record a human take over the same cue sheet when there is any chance to.
+Two synthesis providers, neither required.
 
-    python3 captures/narrate.py [out.wav] [--voice Samantha] [--rate 220]
+`say` is macOS built-in: no network, no key, no account, and it sounds like it. It stays
+the default so the pipeline runs anywhere.
+
+`gcloud` uses Google Cloud Text-to-Speech, which is markedly better. It needs application
+default credentials and the texttospeech API enabled on a project, and it bills that
+project - fractions of a cent for this script, but not free. Studio voices are built for
+long-form narration and honour speakingRate; the Chirp3-HD family sounds excellent and
+only partly honours it. Either is fine, because holds are measured rather than assumed.
+
+A human take still beats both. The cue sheet is the same either way.
+
+    python3 captures/narrate.py                                   # macOS say
+    python3 captures/narrate.py --provider gcloud                  # Cloud TTS
+    python3 captures/narrate.py --provider gcloud --calibrate      # re-time for it
 """
 import argparse
 import json
@@ -58,11 +70,74 @@ def duration(path: pathlib.Path) -> float:
     return float(probe.stdout.strip())
 
 
+def _say_speaker(args):
+    """macOS `say`, resampled to the rate the mix uses."""
+    def speak(text: str, wav: pathlib.Path) -> None:
+        aiff = wav.with_suffix(".aiff")
+        subprocess.run(["say", "-v", args.voice, "-r", str(args.rate), "-o", str(aiff), text],
+                       check=True)
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(aiff),
+                        "-ar", "48000", "-ac", "1", str(wav)], check=True)
+    return speak
+
+
+def _gcloud_speaker(args):
+    """Google Cloud Text-to-Speech over REST, authorised by application default credentials.
+
+    REST and the gcloud CLI rather than a client library, so this adds no dependency to a
+    project whose evaluation gate must run on a clean checkout with no account. If the
+    credentials are missing the error says so instead of producing silence.
+    """
+    import base64
+    import json as _json
+    import urllib.error
+    import urllib.request
+
+    def _sh(*cmd: str) -> str:
+        out = subprocess.run(cmd, capture_output=True, text=True)
+        return out.stdout.strip()
+
+    token = _sh("gcloud", "auth", "application-default", "print-access-token")
+    if not token:
+        sys.exit("no application default credentials: run `gcloud auth application-default login`")
+    project = args.gcloud_project or _sh("gcloud", "config", "get-value", "project")
+    if not project:
+        sys.exit("no billing project: pass --gcloud-project or set one with `gcloud config set project`")
+
+    def speak(text: str, wav: pathlib.Path) -> None:
+        body = _json.dumps({
+            "input": {"text": text},
+            "voice": {"languageCode": "en-US", "name": args.gcloud_voice},
+            "audioConfig": {"audioEncoding": "LINEAR16", "sampleRateHertz": 48000,
+                            "speakingRate": args.gcloud_rate},
+        }).encode()
+        req = urllib.request.Request(
+            "https://texttospeech.googleapis.com/v1/text:synthesize", data=body,
+            headers={"Authorization": f"Bearer {token}",
+                     "x-goog-user-project": project,
+                     "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=60) as res:
+                payload = _json.load(res)
+        except urllib.error.HTTPError as exc:
+            sys.exit(f"text-to-speech refused the request: {exc.read().decode()[:300]}")
+        raw = wav.with_suffix(".raw.wav")
+        raw.write_bytes(base64.b64decode(payload["audioContent"]))
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(raw),
+                        "-ar", "48000", "-ac", "1", str(wav)], check=True)
+    return speak
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("out", nargs="?", default="captures/narration.wav")
-    ap.add_argument("--voice", default="Samantha")
-    ap.add_argument("--rate", type=int, default=220)
+    ap.add_argument("--provider", choices=("say", "gcloud"), default="say")
+    ap.add_argument("--voice", default="Samantha", help="`say` voice name")
+    ap.add_argument("--rate", type=int, default=220, help="`say` rate")
+    ap.add_argument("--gcloud-voice", default="en-US-Studio-O")
+    ap.add_argument("--gcloud-rate", type=float, default=1.2)
+    ap.add_argument("--gcloud-project", default=None,
+                    help="billing project; defaults to the active gcloud config")
     ap.add_argument("--script", default=str(HERE / "narration.md"))
     ap.add_argument("--beats", default=str(HERE / "beats.json"))
     ap.add_argument("--calibrate", action="store_true",
@@ -78,14 +153,12 @@ def main() -> None:
     print(f"{len(lines)} lines over {int(span)//60}:{int(span)%60:02d} "
           f"({300 - span:.0f}s under the cap)\n")
 
+    speak = _gcloud_speaker(args) if args.provider == "gcloud" else _say_speaker(args)
     work = pathlib.Path(tempfile.mkdtemp())
     parts, overruns = [], []
     for i, (at, hold, text) in enumerate(lines):
-        aiff, wav = work / f"{i:02d}.aiff", work / f"{i:02d}.wav"
-        subprocess.run(["say", "-v", args.voice, "-r", str(args.rate), "-o", str(aiff), text],
-                       check=True)
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(aiff),
-                        "-ar", "48000", "-ac", "1", str(wav)], check=True)
+        wav = work / f"{i:02d}.wav"
+        speak(text, wav)
         spoken = duration(wav)
         mark = " "
         if spoken > hold:
@@ -117,7 +190,9 @@ def main() -> None:
     subprocess.run(["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", graph,
                     "-map", "[mixed]", "-ar", "48000", "-ac", "1", args.out], check=True)
 
-    print(f"\n{args.out}  {duration(pathlib.Path(args.out)):.1f}s   voice: {args.voice} @ {args.rate} wpm")
+    label = (f"{args.gcloud_voice} @ rate {args.gcloud_rate}" if args.provider == "gcloud"
+             else f"say {args.voice} @ {args.rate}")
+    print(f"\n{args.out}  {duration(pathlib.Path(args.out)):.1f}s   voice: {label}")
     for at, hold, spoken, text in overruns:
         print(f"  OVERRUN {int(at) // 60}:{int(at) % 60:02d} by {spoken - hold:.1f}s - cut a sentence: {text[:70]}...")
     if not overruns:
