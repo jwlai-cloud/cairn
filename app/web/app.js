@@ -269,7 +269,7 @@ function renderScenarios() {
       CRITICAL: 'var(--haematite)',
     }[s.safetyRiskLevel] ?? 'var(--rule)';
     return `
-    <div class="card ${sel ? 'selected' : ''}" data-scenario="${s.scenarioId}">
+    <div class="card ${sel ? 'selected' : ''}" data-scenario="${s.scenarioId}" data-key="${s.key}">
       <div class="core" style="background:${core}"></div>
       <div>
       <div class="card-head">

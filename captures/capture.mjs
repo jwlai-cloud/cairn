@@ -156,11 +156,11 @@ await clear(page);
 await cue(page, 'pre', 'Three options, then the recommended plan and its route', async () => {
   const opts = APP_HOLDS[cueIndex - 1] * 1000;
   await hl(page, '#scenarioCards');
-  await press(page, '[data-scenario="scn_protect_safety"]');
+  await press(page, '[data-key="protect_safety"]');
   await wait(page, opts * 0.22);
-  await press(page, '[data-scenario="scn_preserve_equipment"]');
+  await press(page, '[data-key="preserve_equipment"]');
   await wait(page, opts * 0.22);
-  await press(page, '[data-scenario="scn_recover_tonnes"]');
+  await press(page, '[data-key="recover_tonnes"]');
 });
 await clear(page);
 
