@@ -125,9 +125,14 @@ await clear(page);
 // 0:43 · the design in one glance
 await cue(page, 'pre', 'The decision spine at rest', () => hl(page, '.spine'));
 
-// 1:02 · correlate, and the graph starts
-await cue(page, 'pre', 'Strands graph fills, four specialists in parallel',
-  () => page.click('#btnAnalyse'));
+// 1:02 · correlate, and the graph genuinely runs. Against a real provider this takes
+// thirteen to seventeen seconds and varies per run, so wait for the plan to arrive
+// rather than assuming a duration. The cue's hold is the ceiling; cue() holds whatever
+// remains once the graph is done.
+await cue(page, 'pre', 'Strands graph fills, four specialists in parallel', async () => {
+  await press(page, '#btnAnalyse');
+  await page.waitForSelector('#scenarioCards .card', { timeout: 90000 });
+});
 
 // 1:22 · why Strands. This is the typed-findings claim, so the fan-in is shown over the
 // live room rather than as a separate slide: the spine stays visible around it.
