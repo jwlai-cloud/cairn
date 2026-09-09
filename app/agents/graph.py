@@ -19,6 +19,7 @@ services that sit *outside* this graph. The model proposes; it never authorises.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -232,11 +233,42 @@ def build_graph(ctx: GraphContext, mode: str = "fixture", model_id: str | None =
 
 
 async def run_graph(
-    prompt: str, ctx: GraphContext, mode: str = "fixture", model_id: str | None = None
+    prompt: str,
+    ctx: GraphContext,
+    mode: str = "fixture",
+    model_id: str | None = None,
+    on_node: "Callable[[str, NodeStatus], None] | None" = None,
 ) -> GraphRunResult:
+    """Run the bounded graph to completion.
+
+    `on_node` is called as each node starts and stops, which is what lets the situation
+    room fill its decision spine while the work is happening. Against a real provider
+    the graph takes fifteen to twenty seconds, and without progress the page sits
+    motionless for all of it - a genuine defect, not only a filming problem. Against the
+    fixture it finishes in about two hundred milliseconds and the callbacks simply
+    arrive together.
+    """
     graph, telemetry, resolved_model_id = build_graph(ctx, mode, model_id)
     started = time.perf_counter()
-    result = await graph.invoke_async(prompt)
+
+    if on_node is None:
+        result = await graph.invoke_async(prompt)
+    else:
+        # Event names verified against the installed SDK, not its docstring. That
+        # documents multi_agent_node_start; the events actually carry a flat `type` of
+        # multiagent_node_start, with no underscore between multi and agent. Parsing the
+        # documented shape silently produced no progress at all.
+        result = None
+        async for event in graph.stream_async(prompt):
+            kind = event.get("type")
+            if kind == "multiagent_result":
+                result = event.get("result")
+            elif kind == "multiagent_node_start":
+                on_node(str(event.get("node_id", "")), NodeStatus.RUNNING)
+            elif kind == "multiagent_node_stop":
+                on_node(str(event.get("node_id", "")), NodeStatus.COMPLETED)
+        if result is None:
+            raise RuntimeError("the graph stream ended without a result event")
     elapsed_ms = int((time.perf_counter() - started) * 1000)
 
     outputs: dict[str, BaseModel] = {}
