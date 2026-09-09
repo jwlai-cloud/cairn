@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import threading
+from collections.abc import Callable
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -168,8 +169,14 @@ class Run:
 
     # ---------------------------------------------------------------- graph run
 
-    async def analyse(self) -> None:
-        """Run the bounded graph, then correlate its typed outputs into one incident."""
+    async def analyse(self, on_node: "Callable[[str, NodeStatus], None] | None" = None) -> None:
+        """Run the bounded graph, then correlate its typed outputs into one incident.
+
+        `on_node` is forwarded to the graph and also applied to this run's node records,
+        so a caller streaming progress and a caller reading the run afterwards see the
+        same thing. Against a real provider this is the difference between a decision
+        spine that fills over seventeen seconds and a page that does not move.
+        """
         if not self.injected_event_ids:
             raise ValueError("No events have been injected; nothing to analyse.")
         self.status = RunStatus.RUNNING
@@ -192,6 +199,15 @@ class Run:
             site=self.source.site_model(),
             baseline_kpi=self.source.baseline_kpi(),
         )
+        def progress(node_id: str, status: NodeStatus) -> None:
+            node = self.nodes.get(node_id)
+            if node is not None:
+                node.status = status
+                if status is NodeStatus.RUNNING:
+                    node.started_at = utcnow()
+            if on_node is not None:
+                on_node(node_id, status)
+
         result = await run_graph(
             f"Compound disruption on Shift A at North Pit. Signals: {titles}",
             context,
@@ -199,6 +215,7 @@ class Run:
             # Reuse the id already named in GRAPH_STARTED so the audit entry and the
             # run cannot describe different models.
             model_id=self.model_id,
+            on_node=progress if on_node is not None else None,
         )
         self.outputs = result.outputs
         self.model_id = result.model_id

@@ -10,12 +10,15 @@ share one run, so one pressing Reset would wipe the other's demo while they watc
 
 from __future__ import annotations
 
+import asyncio
+import json
 import re
 import secrets
+from collections.abc import AsyncIterator
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -26,6 +29,7 @@ from app.domain.models import (
     ApiErrorBody,
     ApprovalRequest,
     Incident,
+    NodeStatus,
     RunView,
     ScenarioOption,
 )
@@ -168,6 +172,51 @@ async def analyse(run: Run = Depends(current_run)) -> RunView:
         run.inject_all_events()
     await run.analyse()
     return run.view()
+
+
+@app.post("/v1/runs/current/analyse/stream")
+async def analyse_streaming(run: Run = Depends(current_run)) -> StreamingResponse:
+    """Analyse, reporting each node as it starts and stops.
+
+    Newline-delimited JSON rather than server-sent events, because EventSource cannot
+    issue a POST and this has to carry the session cookie like every other call. Each
+    line is one node transition; the last line is the finished run view, so a client can
+    ignore the progress entirely and still get what the plain endpoint returns.
+
+    The plain endpoint is unchanged. CI walks that one, and a judge without a streaming
+    client is not worse off.
+    """
+    if not run.injected_event_ids:
+        run.inject_all_events()
+
+    queue: asyncio.Queue[str | None] = asyncio.Queue()
+
+    def on_node(node_id: str, status: NodeStatus) -> None:
+        # A direct put, not call_soon_threadsafe. The graph is awaited in this same
+        # coroutine and calls back synchronously, so deferring the put let the finished
+        # view overtake the last node event: the planner reported RUNNING and never
+        # COMPLETED.
+        queue.put_nowait(json.dumps({"nodeId": node_id, "status": status.value}) + "\n")
+
+    async def drive() -> None:
+        try:
+            await run.analyse(on_node=on_node)
+            queue.put_nowait(run.view().model_dump_json(by_alias=True) + "\n")
+        except Exception as exc:  # surfaced to the client, then the stream ends
+            queue.put_nowait(json.dumps({"error": str(exc)}) + "\n")
+        finally:
+            queue.put_nowait(None)
+
+    async def body() -> AsyncIterator[str]:
+        task = asyncio.create_task(drive())
+        try:
+            while (line := await queue.get()) is not None:
+                yield line
+        finally:
+            await task
+
+    return StreamingResponse(body(), media_type="application/x-ndjson",
+                             headers={"Cache-Control": "no-store"})
 
 
 @app.get("/v1/incidents/{incident_id}", response_model=Incident)

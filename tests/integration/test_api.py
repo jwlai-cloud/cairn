@@ -205,3 +205,46 @@ def test_concurrent_first_requests_for_one_session_share_a_run():
 
     assert len({id(s) for s in stores}) == 1, "every caller must get the same store"
     assert shared.session_count == 1
+
+
+def test_analyse_streams_each_node_then_the_finished_view():
+    """The decision spine has to fill while the graph runs, not after it.
+
+    Against a real provider the graph takes fifteen to twenty seconds, and one blocking
+    call leaves the page motionless for all of it. Fixture mode finishes in about two
+    hundred milliseconds, so this asserts the protocol rather than the timing: every node
+    reports RUNNING before it reports COMPLETED, and the last line is the run view.
+    """
+    import json
+
+    from fastapi.testclient import TestClient
+
+    from app.api.main import app, store
+
+    store.clear()
+    with TestClient(app) as client:
+        client.post("/v1/events")
+        with client.stream("POST", "/v1/runs/current/analyse/stream") as res:
+            assert res.status_code == 200
+            assert res.headers["content-type"].startswith("application/x-ndjson")
+            lines = [json.loads(l) for l in res.iter_lines() if l.strip()]
+
+    progress = [l for l in lines if "nodeId" in l]
+    assert progress, "no node progress was reported"
+    assert all("error" not in l for l in lines), lines
+
+    seen: dict[str, list[str]] = {}
+    for msg in progress:
+        seen.setdefault(msg["nodeId"], []).append(msg["status"])
+    for node_id, states in seen.items():
+        assert states[0] == "RUNNING", f"{node_id} reported {states[0]} before RUNNING"
+        assert "COMPLETED" in states, f"{node_id} never completed"
+
+    final = lines[-1]
+    assert "nodeId" not in final, "the last line must be the run view"
+    assert len(final["scenarios"]) == 3
+    # The plain endpoint is untouched, because CI walks that one.
+    store.clear()
+    with TestClient(app) as plain:
+        plain.post("/v1/events")
+        assert len(plain.post("/v1/runs/current/analyse").json()["scenarios"]) == 3

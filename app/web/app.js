@@ -472,7 +472,51 @@ function toast(title, message, detail, kind) {
 
 $('btnInject').onclick = () => refresh(call('/v1/events/next', { method: 'POST' }));
 $('btnInjectAll').onclick = () => refresh(call('/v1/events', { method: 'POST' }));
-$('btnAnalyse').onclick = () => refresh(call('/v1/runs/current/analyse', { method: 'POST' }));
+// Analyse over a stream so the decision loop fills while the graph is running. Against
+// a real provider the graph takes fifteen to twenty seconds; without this the page does
+// not move for any of it. Falls back to the plain endpoint if streaming is unavailable,
+// so nothing depends on it.
+$('btnAnalyse').onclick = async () => {
+  const btn = $('btnAnalyse');
+  btn.disabled = true;
+  const wasLabel = btn.textContent;
+  btn.textContent = 'Analysing…';
+  try {
+    const res = await fetch('/v1/runs/current/analyse/stream', {
+      method: 'POST', headers: { accept: 'application/x-ndjson' },
+    });
+    if (!res.ok || !res.body) throw new Error('stream unavailable');
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffered = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffered += decoder.decode(value, { stream: true });
+      const lines = buffered.split('\n');
+      buffered = lines.pop() ?? '';
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const msg = JSON.parse(line);
+        if (msg.error) { toast('ANALYSIS FAILED', msg.error, null, 'deny'); continue; }
+        if (msg.nodeId) {
+          // Patch just this node and redraw the spine. A full re-render would need a
+          // view we do not have until the run finishes.
+          const node = view.nodes.find((n) => n.nodeId === msg.nodeId);
+          if (node) { node.status = msg.status; renderSpine(); }
+        } else {
+          view = msg;
+          render();
+        }
+      }
+    }
+  } catch {
+    await refresh(call('/v1/runs/current/analyse', { method: 'POST' }));
+  } finally {
+    btn.textContent = wasLabel;
+    render();
+  }
+};
 $('btnApprove').onclick = approveStep;
 $('btnProhibited').onclick = attemptProhibited;
 $('btnTimeout').onclick = simulateTimeout;
