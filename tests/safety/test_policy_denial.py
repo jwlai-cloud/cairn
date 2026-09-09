@@ -28,20 +28,40 @@ def test_tier_four_is_denied_for_every_role(action_type):
 
 
 def test_policy_denial_does_not_touch_the_agent_layer(monkeypatch):
-    """If policy called a model, this would raise. It must not."""
-    import app.agents.graph as graph
+    """Fail the build if deciding a Tier 4 action reaches a model by any route.
 
-    async def explode(*_a, **_k):  # pragma: no cover - only runs on regression
+    Three seams, not one. Patching only run_graph left a direct model construction
+    inside the policy path undetected, and the demo states on screen that no model is
+    consulted here. A claim shown as verified has to be verified where it is made.
+    """
+    import app.agents.graph as graph
+    import app.agents.fixture_model as fixture_model
+
+    reached = []
+
+    async def explode_graph(*_a, **_k):  # pragma: no cover - only on regression
+        reached.append("run_graph")
         raise AssertionError("policy must not invoke the agent graph")
 
-    monkeypatch.setattr(graph, "run_graph", explode)
-    decision = PolicyService().evaluate(
-        action_type=ActionType.OVERRIDE_SAFETY_INTERLOCK,
-        actor_roles=["SHIFT_SUPERVISOR"],
-        correlation_id="c",
-        decision_id="d",
-    )
-    assert decision.effect is PolicyEffect.DENY
+    def explode_model(*_a, **_k):  # pragma: no cover - only on regression
+        reached.append("model")
+        raise AssertionError("policy must not construct a model")
+
+    monkeypatch.setattr(graph, "run_graph", explode_graph)
+    monkeypatch.setattr(graph, "_model_for", explode_model)
+    monkeypatch.setattr(fixture_model, "FixtureModel", explode_model)
+
+    for roles in (["SHIFT_SUPERVISOR"], ["HSE_LEAD"], []):
+        decision = PolicyService().evaluate(
+            action_type=ActionType.OVERRIDE_SAFETY_INTERLOCK,
+            actor_roles=roles,
+            correlation_id="c",
+            decision_id="d",
+        )
+        assert decision.effect is PolicyEffect.DENY
+        assert decision.tier == 4
+
+    assert reached == [], f"policy reached the model layer via {reached}"
 
 
 def test_action_missing_from_the_policy_table_fails_closed(monkeypatch):

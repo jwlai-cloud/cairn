@@ -436,8 +436,13 @@ export class MineScene {
   start() {
     const tick = () => {
       this._frame = requestAnimationFrame(tick);
-      const t = this.clock.getElapsedTime();
+      // getDelta first: getElapsedTime() calls it internally and advances oldTime, so
+      // asking for the delta afterwards measures the microseconds since that call and
+      // returns ~0. Everything driven by t still animated, which hid it - but the trucks
+      // are the only thing driven by dt, and they had not moved since the scene was
+      // written.
       const dt = this.clock.getDelta();
+      const t = this.clock.elapsedTime;
       const pulse = 0.4 + Math.abs(Math.sin(t * 2.1)) * 0.6;
 
       this.assets.forEach(({ marker, cell }) => {

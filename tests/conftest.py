@@ -18,6 +18,8 @@ def api_client():
 
     from app.api.main import app, store
 
-    store.reset()
+    # Every visitor gets their own run, so tests start from an empty session table and
+    # let the TestClient carry the session cookie between requests.
+    store.clear()
     with TestClient(app) as client:
         yield client

@@ -19,6 +19,7 @@ services that sit *outside* this graph. The model proposes; it never authorises.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -57,8 +58,25 @@ def resolve_model_id_for(mode: str) -> str:
     return resolve_model_id(settings.BEDROCK_REGION, settings.BEDROCK_MODEL_ID)
 
 MAX_NODE_EXECUTIONS = 12
+
+# The graph stays bounded in both modes, but the bounds are not the same size. A fixture
+# node answers in milliseconds; a real model on Bedrock takes tens of seconds, and the
+# risk specialist gathers the most evidence of the four. Sizing every mode to the fixture
+# budget timed the risk node out at 30s against Nova Lite, which reads as a broken graph
+# rather than a budget set for the wrong workload.
+#
+# These are still ceilings, not expectations. Exceeding one is a failure, not a retry.
 EXECUTION_TIMEOUT_SECONDS = 90
 NODE_TIMEOUT_SECONDS = 30
+BEDROCK_EXECUTION_TIMEOUT_SECONDS = 420
+BEDROCK_NODE_TIMEOUT_SECONDS = 150
+
+
+def bounds_for(mode: str) -> tuple[int, int]:
+    """Execution and per-node ceilings for the mode, in seconds."""
+    if mode == "bedrock":
+        return BEDROCK_EXECUTION_TIMEOUT_SECONDS, BEDROCK_NODE_TIMEOUT_SECONDS
+    return EXECUTION_TIMEOUT_SECONDS, NODE_TIMEOUT_SECONDS
 
 
 @dataclass(frozen=True)
@@ -207,18 +225,50 @@ def build_graph(ctx: GraphContext, mode: str = "fixture", model_id: str | None =
     for spec in SPECIALISTS:
         builder.set_entry_point(spec.node_id)            # four specialists run in parallel
         builder.add_edge(spec.node_id, PLANNER.node_id)  # planner waits for all four
+    execution_timeout, node_timeout = bounds_for(mode)
     builder.set_max_node_executions(MAX_NODE_EXECUTIONS)
-    builder.set_execution_timeout(EXECUTION_TIMEOUT_SECONDS)
-    builder.set_node_timeout(NODE_TIMEOUT_SECONDS)
+    builder.set_execution_timeout(execution_timeout)
+    builder.set_node_timeout(node_timeout)
     return builder.build(), telemetry, model_id
 
 
 async def run_graph(
-    prompt: str, ctx: GraphContext, mode: str = "fixture", model_id: str | None = None
+    prompt: str,
+    ctx: GraphContext,
+    mode: str = "fixture",
+    model_id: str | None = None,
+    on_node: "Callable[[str, NodeStatus], None] | None" = None,
 ) -> GraphRunResult:
+    """Run the bounded graph to completion.
+
+    `on_node` is called as each node starts and stops, which is what lets the situation
+    room fill its decision spine while the work is happening. Against a real provider
+    the graph takes fifteen to twenty seconds, and without progress the page sits
+    motionless for all of it - a genuine defect, not only a filming problem. Against the
+    fixture it finishes in about two hundred milliseconds and the callbacks simply
+    arrive together.
+    """
     graph, telemetry, resolved_model_id = build_graph(ctx, mode, model_id)
     started = time.perf_counter()
-    result = await graph.invoke_async(prompt)
+
+    if on_node is None:
+        result = await graph.invoke_async(prompt)
+    else:
+        # Event names verified against the installed SDK, not its docstring. That
+        # documents multi_agent_node_start; the events actually carry a flat `type` of
+        # multiagent_node_start, with no underscore between multi and agent. Parsing the
+        # documented shape silently produced no progress at all.
+        result = None
+        async for event in graph.stream_async(prompt):
+            kind = event.get("type")
+            if kind == "multiagent_result":
+                result = event.get("result")
+            elif kind == "multiagent_node_start":
+                on_node(str(event.get("node_id", "")), NodeStatus.RUNNING)
+            elif kind == "multiagent_node_stop":
+                on_node(str(event.get("node_id", "")), NodeStatus.COMPLETED)
+        if result is None:
+            raise RuntimeError("the graph stream ended without a result event")
     elapsed_ms = int((time.perf_counter() - started) * 1000)
 
     outputs: dict[str, BaseModel] = {}

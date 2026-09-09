@@ -1,0 +1,19 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:InvokeModel",
+                "bedrock:InvokeModelWithResponseStream"
+            ],
+            "Resource": [
+                "arn:aws:bedrock:*::foundation-model/anthropic.claude-*",
+                "arn:aws:bedrock:*::foundation-model/amazon.nova-*",
+                "arn:aws:bedrock:*::foundation-model/openai.*",
+                "arn:aws:bedrock:*:034355008385:inference-profile/us.*",
+                "arn:aws:bedrock:*:034355008385:project/default"
+            ]
+        }
+    ]
+}

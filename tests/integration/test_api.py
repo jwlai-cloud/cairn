@@ -58,3 +58,193 @@ def test_reset_restores_a_clean_run(api_client):
 def test_unknown_scenario_is_a_404(api_client):
     api_client.post("/v1/runs/current/analyse")
     assert api_client.get("/v1/scenarios/scn_nope").status_code == 404
+
+
+def test_two_visitors_get_independent_runs():
+    """A shared demo link must not let one visitor's Reset wipe another's demo."""
+    from fastapi.testclient import TestClient
+
+    from app.api.main import app, store
+
+    store.clear()
+    with TestClient(app) as alice, TestClient(app) as bob:
+        alice.post("/v1/events")
+        assert len(alice.get("/v1/runs/current").json()["events"]) == 5
+        assert bob.get("/v1/runs/current").json()["events"] == [], "bob sees alice's events"
+
+        bob.post("/v1/events")
+        alice.post("/v1/runs/current/reset")
+        assert alice.get("/v1/runs/current").json()["events"] == []
+        assert len(bob.get("/v1/runs/current").json()["events"]) == 5, "alice's reset wiped bob"
+        assert store.session_count == 2
+
+
+def test_a_session_cookie_is_issued_and_reused():
+    from fastapi.testclient import TestClient
+
+    from app.api.main import SESSION_COOKIE, app, store
+
+    store.clear()
+    with TestClient(app) as client:
+        first = client.get("/v1/runs/current")
+        assert SESSION_COOKIE in first.cookies or SESSION_COOKIE in client.cookies
+        sid = client.cookies.get(SESSION_COOKIE)
+        assert sid and len(sid) >= 16
+        client.get("/v1/runs/current")
+        assert client.cookies.get(SESSION_COOKIE) == sid, "session must be stable across calls"
+        assert store.session_count == 1
+
+
+def test_sessions_are_capped_and_evicted():
+    """A public link is an unbounded number of visitors; this store lives in memory."""
+    from app.domain.run_service import SessionRunStore
+
+    small = SessionRunStore(max_sessions=3)
+    for i in range(6):
+        small.run_for(f"visitor-{i}")
+    assert small.session_count == 3
+
+
+def test_audit_history_is_scoped_to_the_session():
+    from fastapi.testclient import TestClient
+
+    from app.api.main import app, store
+
+    store.clear()
+    with TestClient(app) as alice, TestClient(app) as bob:
+        alice.post("/v1/events")
+        a = alice.get("/v1/audit/corr_compound_disruption_v1/history").json()
+        b = bob.get("/v1/audit/corr_compound_disruption_v1/history").json()
+        assert a["entryCount"] == 5
+        assert b["entryCount"] == 0, "bob must not see alice's audit entries"
+
+
+def test_audit_history_survives_a_reset_without_leaking_across_sessions():
+    """Reset starts a new run key, so history has to span the keys a session has used.
+
+    Querying only the current run key lost everything the visitor had already done the
+    moment they pressed Reset; querying the correlation id instead would have spanned
+    every visitor, because they all share it.
+    """
+    from fastapi.testclient import TestClient
+
+    from app.api.main import app, store
+
+    store.clear()
+    with TestClient(app) as alice, TestClient(app) as bob:
+        alice.post("/v1/events")
+        before = alice.get("/v1/audit/corr_compound_disruption_v1/history").json()["entryCount"]
+        assert before > 0
+
+        alice.post("/v1/runs/current/reset")
+        alice.post("/v1/events")
+        after = alice.get("/v1/audit/corr_compound_disruption_v1/history").json()
+
+        assert after["entryCount"] == before * 2, "the pre-reset run must still be in the history"
+        assert [e["seq"] for e in after["entries"]] == sorted(e["seq"] for e in after["entries"])
+
+        bob.post("/v1/events")
+        assert bob.get("/v1/audit/corr_compound_disruption_v1/history").json()["entryCount"] == before
+
+
+def test_api_responses_are_not_cached_and_the_cookie_tracks_the_scheme():
+    """Session-scoped data must not sit in a browser cache, or survive as cleartext.
+
+    Both are only reachable once this is hosted: a cached /v1 response can be replayed
+    into a different session on a shared machine, and a cookie without Secure travels in
+    clear. Secure follows the request scheme rather than being pinned on, so the local
+    http runs - the capture and the CI golden path - keep working.
+    """
+    from fastapi.testclient import TestClient
+
+    from app.api.main import SESSION_COOKIE, app, store
+
+    store.clear()
+    with TestClient(app, base_url="http://testserver") as plain:
+        r = plain.post("/v1/events")
+        assert r.headers["cache-control"] == "no-store"
+        assert "secure" not in r.headers["set-cookie"].lower()
+
+    store.clear()
+    with TestClient(app, base_url="https://testserver") as tls:
+        r = tls.post("/v1/events")
+        assert "Secure" in r.headers["set-cookie"]
+        assert tls.cookies.get(SESSION_COOKIE)
+
+
+def test_concurrent_first_requests_for_one_session_share_a_run():
+    """Two requests arriving together on one cookie must not build two runs.
+
+    Without a lock both miss the lookup, both construct a RunStore, and the second
+    assignment discards the first - so a decision written into the discarded run
+    disappears on the next call.
+
+    The window is a few bytecodes wide, so simply hammering the store from threads does
+    not reach it under the GIL - that version of this test passed against the unlocked
+    code and proved nothing. Constructing a run is made slow instead, which widens the
+    window to something a scheduler will always interleave.
+    """
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    from app.domain import run_service
+
+    real_init = run_service.RunStore.__init__
+
+    def slow_init(self, *args, **kwargs):
+        time.sleep(0.05)
+        real_init(self, *args, **kwargs)
+
+    shared = run_service.SessionRunStore()
+    run_service.RunStore.__init__ = slow_init
+    try:
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            stores = list(pool.map(lambda _: shared.store_for("one-visitor"), range(8)))
+    finally:
+        run_service.RunStore.__init__ = real_init
+
+    assert len({id(s) for s in stores}) == 1, "every caller must get the same store"
+    assert shared.session_count == 1
+
+
+def test_analyse_streams_each_node_then_the_finished_view():
+    """The decision spine has to fill while the graph runs, not after it.
+
+    Against a real provider the graph takes fifteen to twenty seconds, and one blocking
+    call leaves the page motionless for all of it. Fixture mode finishes in about two
+    hundred milliseconds, so this asserts the protocol rather than the timing: every node
+    reports RUNNING before it reports COMPLETED, and the last line is the run view.
+    """
+    import json
+
+    from fastapi.testclient import TestClient
+
+    from app.api.main import app, store
+
+    store.clear()
+    with TestClient(app) as client:
+        client.post("/v1/events")
+        with client.stream("POST", "/v1/runs/current/analyse/stream") as res:
+            assert res.status_code == 200
+            assert res.headers["content-type"].startswith("application/x-ndjson")
+            lines = [json.loads(l) for l in res.iter_lines() if l.strip()]
+
+    progress = [l for l in lines if "nodeId" in l]
+    assert progress, "no node progress was reported"
+    assert all("error" not in l for l in lines), lines
+
+    seen: dict[str, list[str]] = {}
+    for msg in progress:
+        seen.setdefault(msg["nodeId"], []).append(msg["status"])
+    for node_id, states in seen.items():
+        assert states[0] == "RUNNING", f"{node_id} reported {states[0]} before RUNNING"
+        assert "COMPLETED" in states, f"{node_id} never completed"
+
+    final = lines[-1]
+    assert "nodeId" not in final, "the last line must be the run view"
+    assert len(final["scenarios"]) == 3
+    # The plain endpoint is untouched, because CI walks that one.
+    store.clear()
+    with TestClient(app) as plain:
+        plain.post("/v1/events")
+        assert len(plain.post("/v1/runs/current/analyse").json()["scenarios"]) == 3
