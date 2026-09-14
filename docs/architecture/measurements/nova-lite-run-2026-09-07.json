@@ -1,0 +1,31 @@
+{
+  "model_id": "us.amazon.nova-lite-v1:0",
+  "prompt_version": "prompts-v1",
+  "wall_clock_seconds": 11.34,
+  "usage": {
+    "inputTokens": 30253,
+    "outputTokens": 2504,
+    "totalTokens": 32757
+  },
+  "per_node_ms": {
+    "reliability": 4393,
+    "risk": 5272,
+    "situation": 5591,
+    "operations": 8113,
+    "scenario_planner": 2878
+  },
+  "statuses": {
+    "reliability": "NodeStatus.COMPLETED",
+    "risk": "NodeStatus.COMPLETED",
+    "situation": "NodeStatus.COMPLETED",
+    "operations": "NodeStatus.COMPLETED",
+    "scenario_planner": "NodeStatus.COMPLETED"
+  },
+  "tool_calls_per_node": {
+    "situation": 3,
+    "reliability": 3,
+    "operations": 3,
+    "risk": 2,
+    "scenario_planner": 0
+  }
+}

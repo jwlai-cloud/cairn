@@ -1,0 +1,74 @@
+[
+  {
+    "at": 2.94,
+    "seconds": 18.000999999999998,
+    "section": "pre",
+    "label": "Normal shift, trucks running, CAIRN quiet"
+  },
+  {
+    "at": 20.941,
+    "seconds": 18.001,
+    "section": "pre",
+    "label": "Crusher, truck and weather events land"
+  },
+  {
+    "at": 38.95,
+    "seconds": 18.000999999999998,
+    "section": "pre",
+    "label": "The decision spine at rest"
+  },
+  {
+    "at": 56.951,
+    "seconds": 25.002000000000002,
+    "section": "pre",
+    "label": "Strands graph fills, four specialists in parallel"
+  },
+  {
+    "at": 81.953,
+    "seconds": 18,
+    "section": "pre",
+    "label": "Typed findings cross the edges: the fan-in, over the live room"
+  },
+  {
+    "at": 99.955,
+    "seconds": 13.001999999999995,
+    "section": "pre",
+    "label": "Stale telemetry and a source conflict, both surfaced"
+  },
+  {
+    "at": 112.958,
+    "seconds": 16.001000000000005,
+    "section": "pre",
+    "label": "Three options, then the recommended plan and its route"
+  },
+  {
+    "at": 128.96,
+    "seconds": 18.001000000000005,
+    "section": "pre",
+    "label": "DENIED by deterministic policy, no model call"
+  },
+  {
+    "at": 146.963,
+    "seconds": 13.001000000000005,
+    "section": "pre",
+    "label": "Scoped approval: named role, plan version, single use"
+  },
+  {
+    "at": 159.965,
+    "seconds": 20.001000000000005,
+    "section": "pre",
+    "label": "Timeout to UNKNOWN, blind retry refused, then reconciled"
+  },
+  {
+    "at": 179.967,
+    "seconds": 9.000999999999976,
+    "section": "post",
+    "label": "The chain: event, evidence, findings, policy, approval, action, outcome"
+  },
+  {
+    "at": 188.969,
+    "seconds": 10.001000000000005,
+    "section": "post",
+    "label": "The room, reset and quiet"
+  }
+]

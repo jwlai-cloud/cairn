@@ -7,7 +7,7 @@ Identify hazards, the controls that apply, and the evidence that is missing.
 Weather, geotechnical standards, permits, location context, route exposure.
 
 ## Allowed tools
-`get_weather_window`, `get_active_permits`, `get_evidence`, `get_site_context`. Read-only.
+`get_weather_window`, `get_site_context`, `get_evidence`. Read-only.
 
 ## Required output
 `RiskAssessment` with one `RiskFinding` per hazard, each naming its control.

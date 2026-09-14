@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 
 SCHEMA_VERSION = "1.0"
@@ -84,6 +84,31 @@ class ActionType(str, Enum):
     APPROVE_BLAST_PERMIT = "APPROVE_BLAST_PERMIT"
     CHANGE_ISOLATION_STATE = "CHANGE_ISOLATION_STATE"
     SET_CRUSHER_CONTROL_SETPOINT = "SET_CRUSHER_CONTROL_SETPOINT"
+
+
+class Role(str, Enum):
+    """An accountable human role. Free-form strings let a real model invent its own.
+
+    Nova Lite returned `operations_manager`, which is plausible, absent from the policy
+    table, and therefore unresolvable by the approval service. The fixture always wrote
+    the right value, so nothing caught it until a real model ran.
+    """
+
+    SHIFT_SUPERVISOR = "SHIFT_SUPERVISOR"
+    MAINTENANCE_PLANNER = "MAINTENANCE_PLANNER"
+
+
+class ScenarioKey(str, Enum):
+    """The three recovery shapes. The UI selects by these and the evaluation asserts on them.
+
+    This was a `str` with the legal values written in a code comment, so `option_1`
+    validated exactly as well as `recover_tonnes`. A comment constrains nobody, and the
+    schema is what the model is actually shown.
+    """
+
+    PROTECT_SAFETY = "protect_safety"
+    RECOVER_TONNES = "recover_tonnes"
+    PRESERVE_EQUIPMENT = "preserve_equipment"
 
 
 class PolicyEffect(str, Enum):
@@ -276,8 +301,16 @@ class RiskAssessment(AgentOutputBase):
 
 
 class ScenarioImpacts(Contract):
-    estimated_throughput_delta: float  # fraction, negative is a loss
-    estimated_tonnes_delta: int
+    estimated_throughput_delta: float = Field(
+        description="Change in crusher throughput as a fraction. Negative is a reduction."
+    )
+    estimated_tonnes_delta: int = Field(
+        description=(
+            "Tonnes RECOVERED by taking this option, measured against doing nothing for "
+            "the rest of the shift. Positive means this option recovers tonnes. It is not "
+            "a loss against an undisrupted plan, which would make every option negative."
+        )
+    )
     estimated_recovery_minutes: int
     affected_assets: list[str]
     affected_routes: list[str] = Field(default_factory=list)
@@ -287,7 +320,7 @@ class ScenarioOption(Contract):
     schema_version: str = SCHEMA_VERSION
     scenario_id: str
     scenario_version: int = 1
-    key: str  # protect_safety | recover_tonnes | preserve_equipment
+    key: ScenarioKey
     title: str
     summary: str
     status: str = "PROPOSED"
@@ -298,7 +331,7 @@ class ScenarioOption(Contract):
     impacts: ScenarioImpacts
     safety_risk_level: Severity
     risk_findings: list[str] = Field(default_factory=list)
-    required_approvals: list[str]
+    required_approvals: list[Role]
     requested_action_types: list[ActionType]
     evidence_ids: list[str]
     confidence: float = Field(ge=0.0, le=1.0)
@@ -309,9 +342,27 @@ class ScenarioOption(Contract):
 class ScenarioSet(AgentOutputBase):
     headline: str
     options: list[ScenarioOption]
-    recommended_scenario_id: str
+    recommended_scenario_id: str = Field(
+        description="Must equal the scenarioId of one of the options in this same set."
+    )
     recommendation_reason: str
     would_change_if: str
+
+    @model_validator(mode="after")
+    def _recommendation_must_exist(self) -> "ScenarioSet":
+        """A recommendation pointing at nothing leaves the UI with no card highlighted.
+
+        Nova Lite returned `scenario_id_1` while its options were `opt_1` to `opt_3`.
+        Pydantic was satisfied, because both are strings. Referential integrity is not a
+        type, so it has to be asserted.
+        """
+        ids = {o.scenario_id for o in self.options}
+        if self.recommended_scenario_id not in ids:
+            raise ValueError(
+                f"recommendedScenarioId {self.recommended_scenario_id!r} is not one of "
+                f"{sorted(ids)}"
+            )
+        return self
 
 
 # ------------------------------------------------------------------ policy/approval

@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "CAIRN Strands agent topology",
+    "subtitle": "Four specialists execute in parallel. The planner waits for all four. Each edge carries a typed, evidence-backed finding, and a tool call outside a node's allow-list is cancelled at call time.",
+    "visual_preset": "signal-flow",
+    "quality_profile": "standard",
+    "viewBox": [
+      1360,
+      780
+    ]
+  },
+  "lanes": [
+    {
+      "id": "l_site",
+      "label": "Site and events"
+    },
+    {
+      "id": "l_equip",
+      "label": "Equipment"
+    },
+    {
+      "id": "l_prod",
+      "label": "Production"
+    },
+    {
+      "id": "l_hse",
+      "label": "Weather and controls"
+    },
+    {
+      "id": "l_plan",
+      "label": "Planning"
+    }
+  ],
+  "mainPath": [
+    "n_run",
+    "n_situation",
+    "n_planner",
+    "n_options"
+  ],
+  "nodes": [
+    {
+      "id": "n_run",
+      "lane": "l_plan",
+      "col": 0,
+      "type": "messagebus",
+      "width": 128,
+      "label": "Graph run",
+      "sublabel": "four entry points",
+      "tag": "bounded"
+    },
+    {
+      "id": "n_situation",
+      "lane": "l_site",
+      "col": 2,
+      "type": "backend",
+      "width": 146,
+      "label": "Situation",
+      "sublabel": "signals into one incident",
+      "tag": "4 tools"
+    },
+    {
+      "id": "n_reliability",
+      "lane": "l_equip",
+      "col": 2,
+      "type": "backend",
+      "width": 146,
+      "label": "Reliability",
+      "sublabel": "maintenance limits",
+      "tag": "3 tools"
+    },
+    {
+      "id": "n_operations",
+      "lane": "l_prod",
+      "col": 2,
+      "type": "backend",
+      "width": 146,
+      "label": "Operations",
+      "sublabel": "dispatch and levers",
+      "tag": "3 tools"
+    },
+    {
+      "id": "n_risk",
+      "lane": "l_hse",
+      "col": 2,
+      "type": "backend",
+      "width": 146,
+      "label": "Risk and HSE",
+      "sublabel": "hazards and controls",
+      "tag": "3 tools"
+    },
+    {
+      "id": "n_planner",
+      "lane": "l_plan",
+      "col": 4,
+      "type": "backend",
+      "width": 146,
+      "label": "Scenario planner",
+      "sublabel": "joins all four. no tools",
+      "tag": "join"
+    },
+    {
+      "id": "n_options",
+      "lane": "l_plan",
+      "col": 5,
+      "type": "database",
+      "width": 146,
+      "label": "Recovery options",
+      "sublabel": "three, trading differently",
+      "tag": "ScenarioSet"
+    }
+  ],
+  "edges": [
+    {
+      "from": "n_run",
+      "to": "n_situation",
+      "role": "branch",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "n_run",
+      "to": "n_reliability",
+      "role": "branch",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "n_run",
+      "to": "n_operations",
+      "role": "branch",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "n_run",
+      "to": "n_risk",
+      "role": "branch",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "n_situation",
+      "to": "n_planner",
+      "role": "main",
+      "label": "SituationSummary",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "n_reliability",
+      "to": "n_planner",
+      "role": "main",
+      "label": "ConstraintSet",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "n_operations",
+      "to": "n_planner",
+      "role": "main",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "n_risk",
+      "to": "n_planner",
+      "role": "main",
+      "label": "RiskAssessment",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "n_planner",
+      "to": "n_options",
+      "role": "main"
+    }
+  ]
+}

@@ -14,6 +14,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
+from collections.abc import Callable
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import timedelta
 
@@ -100,12 +103,17 @@ class Run:
     recommended_scenario_id: str | None = None
     recommendation_reason: str = ""
     would_change_if: str = ""
-    # Set from the graph result, so the audit names the model that actually ran.
+    # Resolved in __post_init__ from the mode, then replaced by the graph result so the
+    # audit names the model that actually ran. It must not default to the fixture id: the
+    # header renders this beside the mode, and in bedrock mode before the first analysis
+    # it read "mode bedrock, cairn-fixture-deterministic-v1" - a contradiction, and the
+    # first thing anyone looks at.
     model_id: str = MODEL_ID_FIXTURE
     gateway: ActionGateway = field(init=False)
     reads: ReadTools = field(init=False)
 
     def __post_init__(self) -> None:
+        self.model_id = resolve_model_id_for(self.mode)
         self.ledger = AuditLedger(CORRELATION_ID, store=self.audit_store)
         self.gateway = ActionGateway(policy=self.policy, ledger=self.ledger)
         self.reads = ReadTools(self.source)
@@ -166,8 +174,14 @@ class Run:
 
     # ---------------------------------------------------------------- graph run
 
-    async def analyse(self) -> None:
-        """Run the bounded graph, then correlate its typed outputs into one incident."""
+    async def analyse(self, on_node: "Callable[[str, NodeStatus], None] | None" = None) -> None:
+        """Run the bounded graph, then correlate its typed outputs into one incident.
+
+        `on_node` is forwarded to the graph and also applied to this run's node records,
+        so a caller streaming progress and a caller reading the run afterwards see the
+        same thing. Against a real provider this is the difference between a decision
+        spine that fills over seventeen seconds and a page that does not move.
+        """
         if not self.injected_event_ids:
             raise ValueError("No events have been injected; nothing to analyse.")
         self.status = RunStatus.RUNNING
@@ -190,6 +204,15 @@ class Run:
             site=self.source.site_model(),
             baseline_kpi=self.source.baseline_kpi(),
         )
+        def progress(node_id: str, status: NodeStatus) -> None:
+            node = self.nodes.get(node_id)
+            if node is not None:
+                node.status = status
+                if status is NodeStatus.RUNNING:
+                    node.started_at = utcnow()
+            if on_node is not None:
+                on_node(node_id, status)
+
         result = await run_graph(
             f"Compound disruption on Shift A at North Pit. Signals: {titles}",
             context,
@@ -197,6 +220,7 @@ class Run:
             # Reuse the id already named in GRAPH_STARTED so the audit entry and the
             # run cannot describe different models.
             model_id=self.model_id,
+            on_node=progress if on_node is not None else None,
         )
         self.outputs = result.outputs
         self.model_id = result.model_id
@@ -745,10 +769,15 @@ class RunStore:
     erase the record of what was decided before, only start a new run against it.
     """
 
-    def __init__(self, mode: str = "fixture", audit_database: str | None = None) -> None:
+    def __init__(self, mode: str = "fixture", audit_database: str | None = None,
+                 audit_store: AuditStore | None = None) -> None:
         self.mode = mode
-        self.audit_store = build_store(audit_database)
+        self.audit_store = audit_store or build_store(audit_database)
         self._run = Run(mode=mode, audit_store=self.audit_store)
+        # Each reset starts a new run key. Keeping the previous ones is what lets the
+        # history span resets without widening the query to the correlation id, which
+        # every session shares and would therefore leak across visitors.
+        self._run_keys = [self._run.ledger.run_key]
 
     @property
     def run(self) -> Run:
@@ -756,8 +785,76 @@ class RunStore:
 
     def reset(self) -> Run:
         self._run = Run(mode=self.mode, audit_store=self.audit_store)
+        self._run_keys.append(self._run.ledger.run_key)
         return self._run
 
     def audit_history(self) -> list:
-        """Every entry ever recorded for this correlation id, across runs and restarts."""
-        return self.audit_store.entries_for_correlation(CORRELATION_ID)
+        """Every entry from this store's runs, oldest first, across resets.
+
+        Scoped to the run keys this store has issued, so a shared audit database is
+        still only ever read back one visitor's worth at a time. Bounded by the
+        store's own lifetime: the run keys live in memory, so a restart starts the
+        history again even when the entries themselves are durable.
+        """
+        entries = [e for key in self._run_keys for e in self.audit_store.entries_for_run(key)]
+        return sorted(entries, key=lambda e: e.seq)
+
+
+class SessionRunStore:
+    """One independent run per visitor.
+
+    A single process-wide run is fine on a laptop and wrong the moment the demo is
+    hosted: two judges opening the same URL would share one run, so one pressing Reset
+    would wipe the other's demo mid-watch. Each session therefore gets its own Run,
+    keyed by a cookie.
+
+    Sessions are capped and evicted least-recently-used, because a public link is an
+    unbounded number of visitors and this store lives in memory.
+    """
+
+    def __init__(self, mode: str = "fixture", audit_database: str | None = None,
+                 max_sessions: int = 200) -> None:
+        self.mode = mode
+        self.audit_database = audit_database
+        self.max_sessions = max_sessions
+        # Audit persistence is shared: it is append-only and rows carry their run_key,
+        # so sessions cannot read or disturb each other's entries.
+        self.audit_store = build_store(audit_database)
+        self._stores: OrderedDict[str, RunStore] = OrderedDict()
+        # Read-modify-write over the session map. Two concurrent requests carrying the
+        # same cookie can both miss the lookup, both build a RunStore, and the second
+        # assignment then discards the first - so whichever request wrote a decision
+        # into the discarded run has it silently disappear on the next call.
+        self._lock = threading.Lock()
+
+    def store_for(self, session_id: str) -> RunStore:
+        with self._lock:
+            store = self._stores.get(session_id)
+            if store is None:
+                store = RunStore(mode=self.mode, audit_store=self.audit_store)
+                self._stores[session_id] = store
+                while len(self._stores) > self.max_sessions:
+                    self._stores.popitem(last=False)
+            else:
+                self._stores.move_to_end(session_id)
+            return store
+
+    def run_for(self, session_id: str) -> Run:
+        return self.store_for(session_id).run
+
+    def reset(self, session_id: str) -> Run:
+        return self.store_for(session_id).reset()
+
+    def audit_history(self, session_id: str) -> list:
+        """Only this session's entries, so one visitor never sees another's decisions."""
+        return self.store_for(session_id).audit_history()
+
+    def clear(self) -> None:
+        """Drop every session. Used by tests to start from a known state."""
+        with self._lock:
+            self._stores.clear()
+
+    @property
+    def session_count(self) -> int:
+        with self._lock:
+            return len(self._stores)

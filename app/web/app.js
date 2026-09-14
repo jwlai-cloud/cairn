@@ -99,7 +99,7 @@ function showAssetPop(asset, at) {
     <h4>${asset.name}</h4>
     <p>${asset.detail}</p>
     <p><b>${asset.state}</b> · capacity ${asset.capacityPercent}%</p>
-    ${events.map((e) => `<p>· ${e.title}</p>`).join('')}`;
+    ${events.map((e) => `<p>· ${esc(e.title)}</p>`).join('')}`;
   pop.hidden = false;
   const host = $('sceneHost').getBoundingClientRect();
   pop.style.left = `${Math.min(at.x - host.left + 14, host.width - 300)}px`;
@@ -193,7 +193,7 @@ function renderIncident() {
   body.className = '';
   const notices = [...view.notices, ...view.conflictNotes];
   body.innerHTML = `
-    <div class="incident-title">${inc.title}</div>
+    <div class="incident-title">${esc(inc.title)}</div>
     <div class="incident-narr">${inc.narrative}</div>
     <div class="meta-row">
       <span class="tag hot">${inc.severity}</span>
@@ -218,15 +218,15 @@ function renderAgents() {
     <div class="agent ${n.status.toLowerCase()}">
       <div class="agent-head">
         <span class="agent-state"></span>
-        <span class="agent-name">${n.label}</span>
+        <span class="agent-name">${esc(n.label)}</span>
         <span class="agent-kind">${n.kind}</span>
       </div>
-      ${n.headline ? `<div class="agent-headline">${n.headline}</div>` : `<div class="agent-headline muted">${n.role}</div>`}
+      ${n.headline ? `<div class="agent-headline">${esc(n.headline)}</div>` : `<div class="agent-headline muted">${n.role}</div>`}
       ${n.status === 'COMPLETED' ? `<div class="agent-sub">
         ${n.confidence != null ? `confidence ${n.confidence} · ` : ''}${n.evidenceIds.length} evidence${n.durationMs ? ` · ${n.durationMs}ms` : ''}
       </div>` : ''}
       ${n.toolCalls?.length ? `<div class="agent-tools">
-        ${n.toolCalls.map((t) => `<span class="tool ${t.blocked ? 'blocked' : ''}" title="${t.blocked ? t.reason : `${t.status} · ${t.durationMs}ms · sha ${t.responseHash}`}">${t.blocked ? '⃠ ' : ''}${t.toolName}</span>`).join('')}
+        ${n.toolCalls.map((t) => `<span class="tool ${t.blocked ? 'blocked' : ''}" title="${t.blocked ? esc(t.reason) : `${esc(t.status)} · ${t.durationMs}ms · sha ${t.responseHash}`}">${t.blocked ? '⃠ ' : ''}${t.toolName}</span>`).join('')}
       </div>` : ''}
       ${extras ? `<details><summary>evidence, assumptions, uncertainty</summary><ul>
         ${n.evidenceIds.length ? `<li><b>Evidence:</b> ${n.evidenceIds.join(', ')}</li>` : ''}${extras}
@@ -243,7 +243,7 @@ function renderEvidence() {
       : (e.conflictsWith.length ? '<span class="ev-flag conflict">CONFLICT</span>' : '');
     return `<div class="ev ${cls}">
       <div><span class="ev-id">${e.evidenceId}</span>${flag}</div>
-      <div>${e.summary}</div>
+      <div>${esc(e.summary)}</div>
       <div class="ev-meta">${e.sourceSystem} · freshness ${e.freshnessSeconds}s · reliability ${e.reliability} · ${e.dataClassification}</div>
     </div>`;
   }).join('') || '<div class="muted">No evidence yet.</div>';
@@ -269,14 +269,14 @@ function renderScenarios() {
       CRITICAL: 'var(--haematite)',
     }[s.safetyRiskLevel] ?? 'var(--rule)';
     return `
-    <div class="card ${sel ? 'selected' : ''}" data-scenario="${s.scenarioId}">
+    <div class="card ${sel ? 'selected' : ''}" data-scenario="${s.scenarioId}" data-key="${s.key}">
       <div class="core" style="background:${core}"></div>
       <div>
       <div class="card-head">
-        <span class="card-title">${s.title}</span>
+        <span class="card-title">${esc(s.title)}</span>
         ${rec ? '<span class="rec-flag">RECOMMENDED</span>' : ''}
       </div>
-      <div class="card-sum">${s.summary}</div>
+      <div class="card-sum">${esc(s.summary)}</div>
       <div class="card-metrics">
         <div class="met"><u>TONNES</u><b class="${s.scenarioId === view.recommendedScenarioId ? 'good' : ''}">+${s.impacts.estimatedTonnesDelta.toLocaleString()}</b></div>
         <div class="met"><u>RECOVERY</u><b>${s.impacts.estimatedRecoveryMinutes}<span style="font-size:11px">m</span></b></div>
@@ -314,8 +314,8 @@ function renderTimeline() {
     const at = new Date(e.source.receivedAt).toISOString().slice(11, 16);
     return `<div class="tl-item">
       ${i ? '<span class="tl-line"></span>' : ''}
-      <span class="tl-dot ${e.severity}" title="${e.title}"></span>
-      <span class="tl-label">${at} ${e.title}</span>
+      <span class="tl-dot ${e.severity}" title="${esc(e.title)}"></span>
+      <span class="tl-label">${at} ${esc(e.title)}</span>
     </div>`;
   });
   $('timeline').innerHTML = items.join('') || '<span class="muted" style="font-size:11px">No events injected. Shift running normally.</span>';
@@ -325,6 +325,11 @@ function renderButtons() {
   const hasEvents = view.events.length > 0;
   const analysed = view.scenarios.length > 0;
   const approval = view.approval;
+  const unknown = view.actions.some((a) => a.status === 'UNKNOWN');
+
+  // The reliability drill only makes sense once something is approved but not yet done.
+  $('btnTimeout').hidden = !(approval?.status === 'APPROVED' && !unknown);
+  $('btnReconcile').hidden = !unknown;
   $('btnInject').disabled = view.events.length >= 5;
   $('btnInjectAll').disabled = view.events.length >= 5;
   $('btnAnalyse').disabled = !hasEvents || analysed;
@@ -373,6 +378,56 @@ async function approveStep() {
   }
 }
 
+async function simulateTimeout() {
+  const ok = await refresh(call('/v1/actions/timeout', { method: 'POST' }));
+  if (ok) {
+    const unknown = ok.actions.filter((a) => a.status === 'UNKNOWN');
+    toast('OUTCOME UNKNOWN', `The dispatch system timed out after the call may already have applied. `
+      + `${unknown.length} action(s) held in UNKNOWN rather than retried.`,
+      { actionIds: unknown.map((a) => a.actionId).join(', '), requiresReconciliation: true }, 'deny');
+  }
+}
+
+async function retryBlindly() {
+  try {
+    await call('/v1/actions', { method: 'POST' });
+    toast('UNEXPECTED', 'A blind retry was allowed. This is a defect.', null, 'deny');
+  } catch (err) {
+    toast('RETRY REFUSED', err.message,
+      { ...err.details, note: 'an action that may already have applied is never retried' }, 'deny');
+  }
+  view = await call('/v1/runs/current');
+  render();
+}
+
+async function reconcile() {
+  // Every unresolved action has to be closed out, not just the first: a plan can leave
+  // more than one call in doubt, and a half-reconciled plan is still an open question.
+  const unknown = view.actions.filter((a) => a.status === 'UNKNOWN');
+  if (!unknown.length) return;
+
+  // One failure must not abandon the rest. Stopping at the first rejection left the
+  // later actions UNKNOWN with nothing on screen saying so - which is the exact failure
+  // this control exists to prevent, reintroduced one level up.
+  const failed = [];
+  for (const action of unknown) {
+    const ok = await refresh(call(`/v1/actions/${action.actionId}/reconcile`,
+      { method: 'POST', body: { applied: true } }));
+    if (!ok) failed.push(action.actionId);
+  }
+
+  if (failed.length) {
+    toast('RECONCILIATION INCOMPLETE',
+      `${failed.length} of ${unknown.length} action(s) are still UNKNOWN and must be `
+      + 'confirmed against the dispatch system before this plan can be closed.',
+      { unresolved: failed.join(', ') }, 'deny');
+    return;
+  }
+  toast('RECONCILED', `${unknown.length} action(s) confirmed applied by the dispatch system. `
+    + 'UNKNOWN → RECONCILING → SUCCEEDED.',
+    { actionIds: unknown.map((a) => a.actionId).join(', ') }, 'ok');
+}
+
 async function attemptProhibited() {
   try {
     await call('/v1/actions/prohibited', { method: 'POST', body: { actionType: 'OVERRIDE_SAFETY_INTERLOCK' } });
@@ -391,32 +446,114 @@ async function openAudit() {
     <div class="audit-row">
       <div class="audit-seq">${String(e.seq).padStart(2, '0')}</div>
       <div>
-        <div class="audit-stage">${e.stage}</div>
-        <div class="audit-summary">${e.summary}</div>
-        <div class="audit-actor">actor: ${e.actor} · ${new Date(e.at).toISOString().slice(11, 19)}Z</div>
+        <div class="audit-stage">${esc(e.stage)}</div>
+        <div class="audit-summary">${esc(e.summary)}</div>
+        <div class="audit-actor">actor: ${esc(e.actor)} · ${new Date(e.at).toISOString().slice(11, 19)}Z</div>
         ${Object.keys(e.refs).length ? `<div class="audit-refs">${Object.entries(e.refs).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(' · ')}</div>` : ''}
       </div>
     </div>`).join('');
   $('auditDrawer').hidden = false;
 }
 
+// A refusal stays on screen until it is superseded or dismissed. It used to clear
+// itself after nine seconds, which meant the denial - the thing the operator most needs
+// to have seen - quietly vanished while they were still reading the rule id. An outcome
+// that expires on a timer is the one kind of message that must not.
+// Toast content is built as text nodes, never interpolated into innerHTML. Some of it is
+// server-supplied and some of that is attacker-influenced: the approval endpoint accepts
+// an arbitrary approverRole, which comes back inside ActionRejected.message. A template
+// string into innerHTML made that a script injection, in a project whose entire claim is
+// that untrusted input stays data.
+// Escape anything interpolated into markup. Most of what this view renders is model
+// output or evidence text, and a document carrying instruction-like content is exactly
+// what evaluation case EV-11 exists to keep as data. That case asserts it at the contract
+// layer; without this it stopped being true at the render layer.
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 function toast(title, message, detail, kind) {
   const el = $('toast');
   el.className = `toast ${kind ?? ''}`;
-  el.innerHTML = `<div class="toast-title">${title}</div><div>${message}</div>
-    ${detail ? `<div class="toast-detail">${Object.entries(detail).map(([k, v]) => `${k}: ${v}`).join(' · ')}</div>` : ''}`;
+  el.replaceChildren();
+
+  const line = (cls, text) => {
+    const div = document.createElement('div');
+    if (cls) div.className = cls;
+    div.textContent = text;
+    return div;
+  };
+
+  el.append(line('toast-title', String(title ?? '')), line('', String(message ?? '')));
+  if (detail) {
+    el.append(line('toast-detail',
+      Object.entries(detail).map(([k, v]) => `${k}: ${v}`).join(' · ')));
+  }
+
+  // A real button, so the toast can be dismissed from the keyboard.
+  const dismiss = document.createElement('button');
+  dismiss.type = 'button';
+  dismiss.className = 'toast-dismiss';
+  dismiss.textContent = 'dismiss';
+  dismiss.onclick = () => { el.hidden = true; };
+  el.append(dismiss);
+
   el.hidden = false;
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => { el.hidden = true; }, 9000);
 }
 
 // ----------------------------------------------------------------------- wiring
 
 $('btnInject').onclick = () => refresh(call('/v1/events/next', { method: 'POST' }));
 $('btnInjectAll').onclick = () => refresh(call('/v1/events', { method: 'POST' }));
-$('btnAnalyse').onclick = () => refresh(call('/v1/runs/current/analyse', { method: 'POST' }));
+// Analyse over a stream so the decision loop fills while the graph is running. Against
+// a real provider the graph takes fifteen to twenty seconds; without this the page does
+// not move for any of it. Falls back to the plain endpoint if streaming is unavailable,
+// so nothing depends on it.
+$('btnAnalyse').onclick = async () => {
+  const btn = $('btnAnalyse');
+  btn.disabled = true;
+  const wasLabel = btn.textContent;
+  btn.textContent = 'Analysing…';
+  try {
+    const res = await fetch('/v1/runs/current/analyse/stream', {
+      method: 'POST', headers: { accept: 'application/x-ndjson' },
+    });
+    if (!res.ok || !res.body) throw new Error('stream unavailable');
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffered = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffered += decoder.decode(value, { stream: true });
+      const lines = buffered.split('\n');
+      buffered = lines.pop() ?? '';
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const msg = JSON.parse(line);
+        if (msg.error) { toast('ANALYSIS FAILED', msg.error, null, 'deny'); continue; }
+        if (msg.nodeId) {
+          // Patch just this node and redraw the spine. A full re-render would need a
+          // view we do not have until the run finishes.
+          const node = view.nodes.find((n) => n.nodeId === msg.nodeId);
+          if (node) { node.status = msg.status; renderSpine(); }
+        } else {
+          view = msg;
+          render();
+        }
+      }
+    }
+  } catch {
+    await refresh(call('/v1/runs/current/analyse', { method: 'POST' }));
+  } finally {
+    btn.textContent = wasLabel;
+    render();
+  }
+};
 $('btnApprove').onclick = approveStep;
 $('btnProhibited').onclick = attemptProhibited;
+$('btnTimeout').onclick = simulateTimeout;
+$('btnReconcile').onclick = reconcile;
+$('btnReconcile').oncontextmenu = (e) => { e.preventDefault(); retryBlindly(); };
 $('btnAudit').onclick = openAudit;
 $('btnCloseAudit').onclick = () => { $('auditDrawer').hidden = true; };
 $('btnReset').onclick = async () => {

@@ -18,3 +18,23 @@ sessions/local/
 *.sqlite3
 *.db
 .DS_Store
+
+# Demo recordings and their intermediates are large and regenerable. The scripts that
+# produce them are source and must stay tracked, so ignore the media, not the folder.
+captures/*.wav
+captures/*.aiff
+captures/*.webm
+captures/*.mp4
+captures/*.mov
+captures/frames/
+*.webm
+*.mp4
+*.mov
+node_modules/
+
+# Third-party agent skills, installed by `npx skills add` into the repo because those
+# packages refuse a global install. They are prompt files that run with full agent
+# permissions, and they are not part of this project.
+.agents/
+.claude/skills/
+skills-lock.json
