@@ -113,6 +113,16 @@ function render() {
   $('shift').textContent = view.site.shiftLabel;
   $('site').textContent = view.site.name;
   $('modeBadge').textContent = `mode ${view.mode} · ${view.modelId}`;
+  // Only the deterministic provider needs explaining. In bedrock mode the header already
+  // names the model that ran, which is the whole claim.
+  const prov = $('provenance');
+  prov.hidden = view.mode !== 'fixture';
+  if (!prov.hidden && !prov.dataset.set) {
+    prov.innerHTML = '<b>DETERMINISTIC REPLAY FOR ASSESSMENT.</b> '
+      + 'Same Strands graph, tools and contracts, with a fixture provider so it needs no '
+      + 'credentials. The demo video runs this graph on Amazon Nova.';
+    prov.dataset.set = '1';
+  }
   $('policyBadge').textContent = view.policyVersion;
 
   const chip = $('incidentStatus');
