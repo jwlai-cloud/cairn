@@ -12,8 +12,12 @@ parses that transport and hands it to a reducer, so a downstream node's output i
 real function of what its dependencies produced. Corrupt an upstream finding and the
 plan changes - `tests/evaluation/test_graph_dataflow.py` asserts exactly that.
 
-What this does NOT exercise: Strands hooks (not yet implemented) and tool invocation
-(no agent is registered with tools yet). See docs/architecture/03 3.5-3.6.
+What this does NOT exercise is inference itself. Everything around it is real: `stream`
+emits genuine `toolUse` blocks, so the tool registry, the tool-execution loop and the
+node allow-list hook all run, and structured output goes through Strands' forced tool
+call rather than around it. A node's output is a function of its upstream inputs, not a
+constant. What a fixture run cannot tell you is whether a language model would have
+produced a payload the contract accepts - see docs/submission/blog-post.md.
 
 Swapping in `strands.models.BedrockModel` is a one-line change in graph.py.
 """
