@@ -30,7 +30,10 @@ if (slideHolds.length !== 5) {
 // Three architecture states, then two method frames. The correction frame was cut: a
 // demo spending eleven seconds on a mistake we caught is a process anecdote, not value.
 const [A1, A2, A3, HA, HB] = slideHolds;
-const B_STEPS = [0, 5, 10, 15, 20];
+// Proportions of the hold, not fixed seconds. Fixed steps of 0,5,10,15,20 against a
+// twenty second hold revealed the last link exactly as the beat ended, so the
+// verification row - the payoff of the whole section - was never visible.
+const B_FRACTIONS = [0, 0.16, 0.34, 0.52, 0.70];
 
 const browser = await chromium.launch({ args: ['--hide-scrollbars'] });
 const context = await browser.newContext({
@@ -66,7 +69,8 @@ for (const slide of ['a', 'b']) {
   if (slide === 'b') {
     if (VIDEO) {
       let last = 0;
-      for (const [i, at] of B_STEPS.entries()) {
+      for (const [i, frac] of B_FRACTIONS.entries()) {
+        const at = HB * frac;
         await page.waitForTimeout((at - last) * 1000);
         last = at;
         await page.evaluate((n) => window.revealStep(n), i + 1);
