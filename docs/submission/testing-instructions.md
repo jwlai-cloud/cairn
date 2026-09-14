@@ -9,13 +9,17 @@ exposes a `Model` interface; `BedrockModel` is one implementation and this proje
 another that returns deterministic output from fixtures. That is what lets you assess it
 with no AWS account, no credentials and no API keys, and get the same result every time.
 
-The same graph runs against a real model, and the demo video shows it: the header reads
-`mode bedrock` naming `us.amazon.nova-lite-v1:0`, and the decision loop fills over fifteen
-seconds of genuine inference. The smoke test at the end of this page reproduces it.
+The same graph runs against a real model. The video and the hosted link both show the
+deterministic provider, so that the demo replays identically; the smoke test at the end of
+this page runs the identical graph against Amazon Nova, and that is the run to use if you
+want to see inference in the loop.
 
 ## Hosted
 
-Open the live link. Then, in order:
+<https://cairn-320877670799.us-central1.run.app>
+
+First load takes a few seconds, since the service scales to zero when idle. Then, in
+order:
 
 1. **Inject all** — five signals from four source systems land on the timeline.
 2. **Run analysis** — four specialist agents run in parallel in a bounded Strands graph.
