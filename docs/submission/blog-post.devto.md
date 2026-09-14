@@ -1,8 +1,10 @@
 ---
 title: "Agents for Humans: the fixture that hid four bugs from me"
 published: false
-description: A deterministic model provider made my agent demo reproducible. It also kept four contract bugs green for weeks, because my tests asserted against a provider that happened to behave.
+description: A deterministic model provider made my agent demo reproducible. It also kept four contract bugs green for weeks.
 tags: aws, ai, python, architecture
+# Set this to the builder.aws URL once that version is published, so the original
+# is canonical and the cross-post is not indexed as a competing duplicate.
 canonical_url:
 ---
 
