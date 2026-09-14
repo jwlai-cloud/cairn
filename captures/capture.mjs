@@ -236,6 +236,8 @@ console.log(`\napp runtime: ${Math.floor(runtime / 60)}:${String(Math.round(runt
 console.log(`pre ends at ${preEnd.toFixed(1)}s, post starts at ${beats.find((b) => b.section === 'post').at.toFixed(1)}s`);
 console.log(`video: ${files.join(', ') || 'none written'}`);
 console.log(`pageerrors: ${JSON.stringify(errors.slice(0, 3))}`);
+// A take with page errors is not a take. Fail rather than quietly producing one.
+if (errors.length) process.exitCode = 1;
 console.log('\nbeat sheet (measured against the video clock)');
 for (const b of beats) {
   const whole = Math.round(b.at);

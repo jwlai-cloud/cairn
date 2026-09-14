@@ -99,7 +99,7 @@ function showAssetPop(asset, at) {
     <h4>${asset.name}</h4>
     <p>${asset.detail}</p>
     <p><b>${asset.state}</b> · capacity ${asset.capacityPercent}%</p>
-    ${events.map((e) => `<p>· ${e.title}</p>`).join('')}`;
+    ${events.map((e) => `<p>· ${esc(e.title)}</p>`).join('')}`;
   pop.hidden = false;
   const host = $('sceneHost').getBoundingClientRect();
   pop.style.left = `${Math.min(at.x - host.left + 14, host.width - 300)}px`;
@@ -193,7 +193,7 @@ function renderIncident() {
   body.className = '';
   const notices = [...view.notices, ...view.conflictNotes];
   body.innerHTML = `
-    <div class="incident-title">${inc.title}</div>
+    <div class="incident-title">${esc(inc.title)}</div>
     <div class="incident-narr">${inc.narrative}</div>
     <div class="meta-row">
       <span class="tag hot">${inc.severity}</span>
@@ -218,15 +218,15 @@ function renderAgents() {
     <div class="agent ${n.status.toLowerCase()}">
       <div class="agent-head">
         <span class="agent-state"></span>
-        <span class="agent-name">${n.label}</span>
+        <span class="agent-name">${esc(n.label)}</span>
         <span class="agent-kind">${n.kind}</span>
       </div>
-      ${n.headline ? `<div class="agent-headline">${n.headline}</div>` : `<div class="agent-headline muted">${n.role}</div>`}
+      ${n.headline ? `<div class="agent-headline">${esc(n.headline)}</div>` : `<div class="agent-headline muted">${n.role}</div>`}
       ${n.status === 'COMPLETED' ? `<div class="agent-sub">
         ${n.confidence != null ? `confidence ${n.confidence} · ` : ''}${n.evidenceIds.length} evidence${n.durationMs ? ` · ${n.durationMs}ms` : ''}
       </div>` : ''}
       ${n.toolCalls?.length ? `<div class="agent-tools">
-        ${n.toolCalls.map((t) => `<span class="tool ${t.blocked ? 'blocked' : ''}" title="${t.blocked ? t.reason : `${t.status} · ${t.durationMs}ms · sha ${t.responseHash}`}">${t.blocked ? '⃠ ' : ''}${t.toolName}</span>`).join('')}
+        ${n.toolCalls.map((t) => `<span class="tool ${t.blocked ? 'blocked' : ''}" title="${t.blocked ? esc(t.reason) : `${esc(t.status)} · ${t.durationMs}ms · sha ${t.responseHash}`}">${t.blocked ? '⃠ ' : ''}${t.toolName}</span>`).join('')}
       </div>` : ''}
       ${extras ? `<details><summary>evidence, assumptions, uncertainty</summary><ul>
         ${n.evidenceIds.length ? `<li><b>Evidence:</b> ${n.evidenceIds.join(', ')}</li>` : ''}${extras}
@@ -243,7 +243,7 @@ function renderEvidence() {
       : (e.conflictsWith.length ? '<span class="ev-flag conflict">CONFLICT</span>' : '');
     return `<div class="ev ${cls}">
       <div><span class="ev-id">${e.evidenceId}</span>${flag}</div>
-      <div>${e.summary}</div>
+      <div>${esc(e.summary)}</div>
       <div class="ev-meta">${e.sourceSystem} · freshness ${e.freshnessSeconds}s · reliability ${e.reliability} · ${e.dataClassification}</div>
     </div>`;
   }).join('') || '<div class="muted">No evidence yet.</div>';
@@ -273,10 +273,10 @@ function renderScenarios() {
       <div class="core" style="background:${core}"></div>
       <div>
       <div class="card-head">
-        <span class="card-title">${s.title}</span>
+        <span class="card-title">${esc(s.title)}</span>
         ${rec ? '<span class="rec-flag">RECOMMENDED</span>' : ''}
       </div>
-      <div class="card-sum">${s.summary}</div>
+      <div class="card-sum">${esc(s.summary)}</div>
       <div class="card-metrics">
         <div class="met"><u>TONNES</u><b class="${s.scenarioId === view.recommendedScenarioId ? 'good' : ''}">+${s.impacts.estimatedTonnesDelta.toLocaleString()}</b></div>
         <div class="met"><u>RECOVERY</u><b>${s.impacts.estimatedRecoveryMinutes}<span style="font-size:11px">m</span></b></div>
@@ -314,8 +314,8 @@ function renderTimeline() {
     const at = new Date(e.source.receivedAt).toISOString().slice(11, 16);
     return `<div class="tl-item">
       ${i ? '<span class="tl-line"></span>' : ''}
-      <span class="tl-dot ${e.severity}" title="${e.title}"></span>
-      <span class="tl-label">${at} ${e.title}</span>
+      <span class="tl-dot ${e.severity}" title="${esc(e.title)}"></span>
+      <span class="tl-label">${at} ${esc(e.title)}</span>
     </div>`;
   });
   $('timeline').innerHTML = items.join('') || '<span class="muted" style="font-size:11px">No events injected. Shift running normally.</span>';
@@ -446,9 +446,9 @@ async function openAudit() {
     <div class="audit-row">
       <div class="audit-seq">${String(e.seq).padStart(2, '0')}</div>
       <div>
-        <div class="audit-stage">${e.stage}</div>
-        <div class="audit-summary">${e.summary}</div>
-        <div class="audit-actor">actor: ${e.actor} · ${new Date(e.at).toISOString().slice(11, 19)}Z</div>
+        <div class="audit-stage">${esc(e.stage)}</div>
+        <div class="audit-summary">${esc(e.summary)}</div>
+        <div class="audit-actor">actor: ${esc(e.actor)} · ${new Date(e.at).toISOString().slice(11, 19)}Z</div>
         ${Object.keys(e.refs).length ? `<div class="audit-refs">${Object.entries(e.refs).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(' · ')}</div>` : ''}
       </div>
     </div>`).join('');
@@ -459,12 +459,44 @@ async function openAudit() {
 // itself after nine seconds, which meant the denial - the thing the operator most needs
 // to have seen - quietly vanished while they were still reading the rule id. An outcome
 // that expires on a timer is the one kind of message that must not.
+// Toast content is built as text nodes, never interpolated into innerHTML. Some of it is
+// server-supplied and some of that is attacker-influenced: the approval endpoint accepts
+// an arbitrary approverRole, which comes back inside ActionRejected.message. A template
+// string into innerHTML made that a script injection, in a project whose entire claim is
+// that untrusted input stays data.
+// Escape anything interpolated into markup. Most of what this view renders is model
+// output or evidence text, and a document carrying instruction-like content is exactly
+// what evaluation case EV-11 exists to keep as data. That case asserts it at the contract
+// layer; without this it stopped being true at the render layer.
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 function toast(title, message, detail, kind) {
   const el = $('toast');
   el.className = `toast ${kind ?? ''}`;
-  el.innerHTML = `<div class="toast-title">${title}</div><div>${message}</div>
-    ${detail ? `<div class="toast-detail">${Object.entries(detail).map(([k, v]) => `${k}: ${v}`).join(' · ')}</div>` : ''}
-    <div class="toast-dismiss">click to dismiss</div>`;
+  el.replaceChildren();
+
+  const line = (cls, text) => {
+    const div = document.createElement('div');
+    if (cls) div.className = cls;
+    div.textContent = text;
+    return div;
+  };
+
+  el.append(line('toast-title', String(title ?? '')), line('', String(message ?? '')));
+  if (detail) {
+    el.append(line('toast-detail',
+      Object.entries(detail).map(([k, v]) => `${k}: ${v}`).join(' · ')));
+  }
+
+  // A real button, so the toast can be dismissed from the keyboard.
+  const dismiss = document.createElement('button');
+  dismiss.type = 'button';
+  dismiss.className = 'toast-dismiss';
+  dismiss.textContent = 'dismiss';
+  dismiss.onclick = () => { el.hidden = true; };
+  el.append(dismiss);
+
   el.hidden = false;
 }
 
@@ -524,7 +556,6 @@ $('btnReconcile').onclick = reconcile;
 $('btnReconcile').oncontextmenu = (e) => { e.preventDefault(); retryBlindly(); };
 $('btnAudit').onclick = openAudit;
 $('btnCloseAudit').onclick = () => { $('auditDrawer').hidden = true; };
-$('toast').onclick = () => { $('toast').hidden = true; };
 $('btnReset').onclick = async () => {
   $('auditDrawer').hidden = true;
   $('toast').hidden = true;

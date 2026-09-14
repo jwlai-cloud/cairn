@@ -154,7 +154,9 @@ def main() -> None:
           f"({300 - span:.0f}s under the cap)\n")
 
     speak = _gcloud_speaker(args) if args.provider == "gcloud" else _say_speaker(args)
-    work = pathlib.Path(tempfile.mkdtemp())
+    # Removed on the way out, including when say, ffmpeg or ffprobe fails.
+    work_dir = tempfile.TemporaryDirectory()
+    work = pathlib.Path(work_dir.name)
     parts, overruns = [], []
     for i, (at, hold, text) in enumerate(lines):
         wav = work / f"{i:02d}.wav"

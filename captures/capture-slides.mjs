@@ -83,9 +83,12 @@ for (const slide of ['a', 'b']) {
   if (!VIDEO) await page.screenshot({ path: `${OUT}../docs/design/togaf-${slide}.png` });
 }
 
+// close() finalises the recorded video, so it has to run even when a step throws.
 await context.close();
 await browser.close();
 console.log(VIDEO
   ? `recorded ${slideHolds.reduce((a, b) => a + b, 0)}s of slides`
   : 'wrote docs/design/togaf-{a,b,c}.png');
 console.log(`pageerrors: ${JSON.stringify(errors.slice(0, 3))}`);
+// Printing them and exiting 0 let a broken capture look like a good one.
+if (errors.length) process.exitCode = 1;

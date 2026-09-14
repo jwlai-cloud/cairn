@@ -48,13 +48,15 @@ fixture plus the prompts; output varies by about sixty per cent, because it is t
 model's verbosity. Input therefore dominates at roughly twelve to one, and the input
 rate is what sets the cost.
 
-Basis: 31,000 input and 3,250 output tokens per graph run.
+Basis: 31,000 input and 3,250 output tokens per graph run, at the standard rate.
+An earlier revision of this table used the $2/$10 promotional rate, which ended on
+2026-08-31, before this ADR was written. Sonnet 5 figures are the standard rate.
 Raw measurement in `docs/architecture/measurements/nova-lite-run-2026-09-07.json`.
 
 | Model | Per run | Evaluation suite (~16 runs) | $50 of credits |
 |---|---|---|---|
 | Claude Opus 5 | $0.2363 | $3.78 | ~212 runs |
-| **Claude Sonnet 5** | **$0.0945** | $1.51 | ~529 runs |
+| **Claude Sonnet 5** | **$0.1418** | $2.27 | ~353 runs |
 | **GPT-5.6 Luna** (geo) | $0.0111 | $0.18 | ~4,500 runs |
 | **Nova Lite** | rate not published on the model card | — | — |
 

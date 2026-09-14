@@ -441,7 +441,10 @@ export class MineScene {
       // returns ~0. Everything driven by t still animated, which hid it - but the trucks
       // are the only thing driven by dt, and they had not moved since the scene was
       // written.
-      const dt = this.clock.getDelta();
+      // Cap the delta. A backgrounded tab stops requestAnimationFrame while the clock
+      // keeps running, so the first frame back carries the whole hidden interval and
+      // advances a truck through `% 1` to an arbitrary point on its route.
+      const dt = Math.min(this.clock.getDelta(), 0.1);
       const t = this.clock.elapsedTime;
       const pulse = 0.4 + Math.abs(Math.sin(t * 2.1)) * 0.6;
 

@@ -1,8 +1,12 @@
 # Enabling Bedrock for CAIRN
 
-Fixture mode needs none of this. It is the CI gate and the reproducible replay, and it
-runs with no credentials at all. This is only for the mode that puts a real model behind
-the graph, which is what the demo and the hosted link should run.
+Fixture mode needs none of this. It is the demo path, the CI gate and the reproducible
+replay, and it runs with no credentials at all. The hosted testing link runs it.
+
+This file is for the optional mode that puts a real model behind the graph. That mode is
+exercised - `app/agents/smoke.py` runs the full graph against Nova Lite, and every node
+satisfies its typed contract - but it is a proof that the governance holds against a real
+provider, not the path a judge has to walk.
 
 ## What is actually blocking
 
