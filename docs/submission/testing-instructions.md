@@ -9,10 +9,12 @@ exposes a `Model` interface; `BedrockModel` is one implementation and this proje
 another that returns deterministic output from fixtures. That is what lets you assess it
 with no AWS account, no credentials and no API keys, and get the same result every time.
 
-The same graph runs against a real model. The video and the hosted link both show the
-deterministic provider, so that the demo replays identically; the smoke test at the end of
-this page runs the identical graph against Amazon Nova, and that is the run to use if you
-want to see inference in the loop.
+The same graph runs against a real model, and **the demo video is that run**: the header
+reads `mode bedrock` naming `us.amazon.nova-lite-v1:0`, the decision loop fills over
+nine, five and eight seconds of genuine inference rather than the ~40ms the deterministic
+provider takes, and the incident narrative and scenario titles on screen are the model's
+words, not fixtures. The hosted link is the deterministic one, so that you can assess it
+with no credentials. The smoke test at the end of this page reproduces the Nova run.
 
 ## Hosted
 
