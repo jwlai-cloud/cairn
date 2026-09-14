@@ -1,7 +1,17 @@
 # Testing instructions (paste into the Devpost field)
 
-No AWS account, no credentials and no API keys are needed. The demo runs a deterministic
-provider, so it replays identically every time.
+**The full Strands agent graph runs in this demo.** Four specialist agents execute in
+parallel, hooks cancel any tool call outside a node's allow-list, and every edge carries a
+Pydantic contract enforced through Strands' forced tool call.
+
+What the hosted link swaps is only the **model provider** behind that graph. Strands
+exposes a `Model` interface; `BedrockModel` is one implementation and this project ships
+another that returns deterministic output from fixtures. That is what lets you assess it
+with no AWS account, no credentials and no API keys, and get the same result every time.
+
+The same graph runs against a real model, and the demo video shows it: the header reads
+`mode bedrock` naming `us.amazon.nova-lite-v1:0`, and the decision loop fills over fifteen
+seconds of genuine inference. The smoke test at the end of this page reproduces it.
 
 ## Hosted
 
