@@ -1,0 +1,13 @@
+# Cloud Build uploads this directory before it reads the Dockerfile, so anything not
+# listed here is paid for in upload time. The image needs four paths; ignore everything
+# else and negate those back in.
+*
+!Dockerfile
+!pyproject.toml
+!README.md
+!app/**
+!fixtures/**
+
+# Negation above would otherwise drag caches and bytecode into the image layer.
+**/__pycache__/**
+**/*.pyc

@@ -29,7 +29,7 @@ The initial service can expose a small REST API. Long-running workflows should r
   "schemaVersion": "1.0",
   "correlationId": "corr_01J...",
   "tenantId": "demo-mining-co",
-  "siteId": "site_pilbara_01",
+  "siteId": "site_north_pit_01",
   "occurredAt": "2026-09-06T10:19:00Z",
   "producer": "fleet-adapter",
   "dataClassification": "INTERNAL",
@@ -57,7 +57,7 @@ Required rules:
     "observedAt": "2026-09-06T10:15:00Z",
     "receivedAt": "2026-09-06T10:15:03Z"
   },
-  "siteId": "site_pilbara_01",
+  "siteId": "site_north_pit_01",
   "assetId": "asset_primary_crusher_01",
   "locationId": "loc_crusher_01",
   "severity": "HIGH",
@@ -127,7 +127,7 @@ Agents must return a list of options, not only a single recommendation. The reco
   "scenarioVersion": 3,
   "requestedActionTypes": ["CREATE_WORK_ORDER", "PUBLISH_SHIFT_INSTRUCTION"],
   "scope": {
-    "siteId": "site_pilbara_01",
+    "siteId": "site_north_pit_01",
     "assetIds": ["asset_primary_crusher_01", "asset_truck_204"]
   },
   "requiredRoles": ["SHIFT_SUPERVISOR"],
